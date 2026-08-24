@@ -1,0 +1,5 @@
+id = "security-review"
+version = "1.0.0"
+type = "skill"
+description = "Review project code for security risks, validate context, and propose human-reviewed fixes."
+files = ["SKILL.md", "UPSTREAM.md", "LICENSE", "references/language-patterns.md", "references/report-format.md", "references/secret-patterns.md", "references/vuln-categories.md", "references/vulnerable-packages.md"]

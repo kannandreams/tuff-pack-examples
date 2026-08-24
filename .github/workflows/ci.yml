@@ -1,0 +1,36 @@
+name: Check examples
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  TUFF_VERSION: "0.1.3"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install pinned Tuff CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset=tuff-x86_64-unknown-linux-gnu.tar.gz
+          base="https://github.com/kannandreams/tuff/releases/download/v${TUFF_VERSION}"
+          curl --fail --silent --show-error --location --output "$asset" "$base/$asset"
+          curl --fail --silent --show-error --location --output checksums.txt "$base/checksums.txt"
+          grep "  ${asset}$" checksums.txt | sha256sum --check --strict
+          tar -xzf "$asset"
+          chmod +x tuff
+          ./tuff --version
+
+      - name: Validate packs, tools, hooks, and extraction
+        run: TUFF_BIN="$GITHUB_WORKSPACE/tuff" ./scripts/check.sh

@@ -1,0 +1,15 @@
+{
+  "exclude": [
+    ".git",
+    ".claude",
+    ".agents",
+    ".tuff-reports",
+    "expected",
+    "__pycache__"
+  ],
+  "extensions": [
+    ".py"
+  ],
+  "max_file_bytes": 100000,
+  "scope": "app"
+}

@@ -1,0 +1,5 @@
+.work/
+dist/
+.tuff-reports/
+__pycache__/
+*.pyc

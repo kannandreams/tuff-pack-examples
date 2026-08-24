@@ -1,0 +1,22 @@
+id = "security-baseline-scan"
+version = "1.0.0"
+type = "tool"
+description = "Find a small, deterministic set of security signals in project-local source files."
+files = ["server.py", "README.md"]
+
+[parameters]
+type = "object"
+
+[parameters.properties.policy]
+type = "string"
+description = "Project-relative JSON policy path. Defaults to .tuff-example/security-policy.json."
+
+[parameters.properties.output]
+type = "string"
+description = "Project-relative report path. Defaults to .tuff-reports/security-review.json."
+
+[implementation]
+language = "python3"
+entrypoint = "server.py"
+mcp = true
+runtime_deps = ["python>=3.9"]

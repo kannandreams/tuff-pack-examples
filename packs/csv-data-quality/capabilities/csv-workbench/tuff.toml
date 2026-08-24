@@ -1,0 +1,5 @@
+id = "csv-workbench"
+version = "1.0.0"
+type = "skill"
+description = "Inspect, repair, and summarize project-local CSV data with a deterministic quality check."
+files = ["SKILL.md", "playbook.md", "UPSTREAM.md", "LICENSE"]

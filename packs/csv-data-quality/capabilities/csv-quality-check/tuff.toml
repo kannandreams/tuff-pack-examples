@@ -1,0 +1,22 @@
+id = "csv-quality-check"
+version = "1.0.0"
+type = "tool"
+description = "Validate a project-local CSV against a deterministic JSON quality policy."
+files = ["server.py", "README.md"]
+
+[parameters]
+type = "object"
+
+[parameters.properties.policy]
+type = "string"
+description = "Project-relative JSON policy path. Defaults to .tuff-example/data-quality-policy.json."
+
+[parameters.properties.output]
+type = "string"
+description = "Project-relative report path. Defaults to .tuff-reports/data-quality.json."
+
+[implementation]
+language = "python3"
+entrypoint = "server.py"
+mcp = true
+runtime_deps = ["python>=3.9"]

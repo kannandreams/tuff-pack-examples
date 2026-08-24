@@ -1,0 +1,16 @@
+id = "secure-release-review"
+version = "1.0.0"
+type = "workflow"
+description = "Contract requiring contextual security review, a deterministic baseline, and a Stop gate."
+
+[[workflow.requires]]
+id = "security-review"
+type = "skill"
+
+[[workflow.requires]]
+id = "security-baseline-scan"
+type = "tool"
+
+[[workflow.requires]]
+id = "require-security-review"
+type = "hook"

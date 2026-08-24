@@ -1,0 +1,19 @@
+schema = 1
+name = "dev.tuffcli.examples/security-review"
+version = "1.0.0"
+description = "A teachable baseline security-review capability layer for Claude Code."
+
+[build]
+targets = ["claude"]
+
+[[capabilities]]
+path = "capabilities/security-review"
+
+[[capabilities]]
+path = "capabilities/security-baseline-scan"
+
+[[capabilities]]
+path = "capabilities/require-security-review"
+
+[[capabilities]]
+path = "capabilities/secure-release-review"
