@@ -1,105 +1,190 @@
 # Tuff Pack examples
 
-This repository demonstrates why an agent's capability layer deserves its own version, independently from the application image that hosts the agent.
+A Tuff Pack turns an agent's skills, tools, hooks, and workflows into one versioned file that you can test, publish, and install again.
 
-An application image answers **which code and runtime are deployed?** A Tuff Pack answers **which reviewed skills, tools, hooks, and workflow contract shape the agent's behaviour?** Together they give a useful production identity:
+If you have agent capabilities that currently live as loose files in a repository, start here. You do not need to understand OCI, MCP, or container registries to build your first pack.
 
-```text
-agent application version + capability pack version
-```
+## Try an example in five minutes
 
-The repository contains two independently versioned packs. A team can release one without changing the other, and one application can install either or both.
+### 1. Install Tuff
 
-| Pack | Practical scenario | Included capabilities |
-| --- | --- | --- |
-| [CSV data quality](packs/csv-data-quality/README.md) | A data engineer asks an agent to clean an orders CSV while a deterministic gate prevents it from finishing with invalid data. | Adapted `csv-workbench` skill, Python/MCP checker, Claude Stop hook, workflow contract |
-| [Security review](packs/security-review/README.md) | A developer asks an agent to review an intentionally insecure Python service while a baseline scanner prevents obvious signals from being overlooked. | Adapted `security-review` skill, Python/MCP scanner, Claude Stop hook, workflow contract |
-
-## Prerequisites
-
-- Tuff CLI 0.1.3 or newer (`tuff --version`)
-- Python 3.9 or newer
-- Claude Code for the interactive demos
-- Docker credentials only when publishing to an OCI registry
-
-The tools use only the Python standard library. Tuff validates, packages, verifies, installs, and extracts capabilities; it does not install their runtime dependencies.
-
-All scripts call `tuff` from `PATH` by default. Set `TUFF_BIN` to test with another binary, for example `TUFF_BIN=../tuff/target/debug/tuff ./scripts/check.sh`. This variable affects only the repository's helper scripts; it is not embedded in a pack and is not needed by the installed runtime capabilities.
-
-## Fastest local path
+Install the CLI once:
 
 ```sh
-./scripts/check.sh
-./scripts/build.sh dist
+uv tool install tuffcli
+tuff --version
+```
+
+If it is already installed with `uv`, upgrade it with:
+
+```sh
+uv tool upgrade tuffcli
+```
+
+Tuff Pack commands require Tuff 0.1.3 or newer.
+
+The interactive demos also require Python 3.9 or newer and Claude Code.
+
+### 2. Clone this repository
+
+```sh
+git clone https://github.com/kannandreams/tuff-pack-examples.git
+cd tuff-pack-examples
+```
+
+### 3. Prepare the CSV example
+
+```sh
 ./scripts/prepare-demo.sh csv-data-quality
+```
+
+The script builds the pack, creates a disposable agent project under `.work/csv-data-quality`, installs the pack for Claude, and checks the installed files.
+
+### 4. See what was installed
+
+```sh
 cd .work/csv-data-quality
+tuff list
+```
+
+You will see four capabilities:
+
+- a skill that teaches the agent how to work with CSV data;
+- a tool that performs a deterministic data-quality check;
+- a hook that runs the check before Claude finishes;
+- a workflow that declares that the other three capabilities belong together.
+
+### 5. Run the agent
+
+```sh
 claude
 ```
 
-Inside Claude, ask: `Inspect this project and complete the task in TASK.md. Do not disable the quality gate.`
-
-Use `./scripts/prepare-demo.sh security-review` for the second example. The script refuses to overwrite an existing `.work/<demo>` directory so your work is not silently lost.
-
-## What gets packaged
+Then ask:
 
 ```text
-pack source
-  tuff-pack.toml             pack identity and members
+Inspect this project and complete the task in TASK.md. Do not disable the quality gate.
+```
+
+The starting CSV intentionally contains problems. Claude can inspect and repair it, while the installed hook prevents the task from finishing until the deterministic check passes.
+
+To try the security example instead:
+
+```sh
+./scripts/prepare-demo.sh security-review
+cd .work/security-review
+claude
+```
+
+## Package your own capability
+
+Start with one capability. A pack does not need to contain every capability type.
+
+Assume you already have this Claude skill:
+
+```text
+.claude/skills/code-review/SKILL.md
+```
+
+### 1. Create a portable pack source
+
+```text
+my-first-pack/
+  tuff-pack.toml
   capabilities/
-    <skill>/                 reasoning instructions
-    <tool>/                  deterministic executable + MCP interface
-    <hook>/                  automatic Claude Stop gate
-    <workflow>/              declares which members form the workflow
-
-build output
-  <name>-1.0.0.tuffpack      immutable, deterministic artifact
-
-installed or extracted Claude target
-  .claude/skills/...
-  .claude/tools/...
-  .claude/hooks/...
-  .claude/workflows/...
-  .claude/settings.json
-  .mcp.json
+    code-review/
+      tuff.toml
+      SKILL.md
 ```
 
-The workflow capability is a dependency contract. It tells Tuff which skill, tool, and hook must travel together and lets Tuff reject an incomplete pack. It does not run those steps in sequence. Claude follows the installed skill instructions, invokes the MCP tool, and triggers the registered hook at its native lifecycle point.
+Copy your existing `SKILL.md` into `my-first-pack/capabilities/code-review/`. The pack source does not use a `.claude` directory because Tuff will render the correct harness layout later.
 
-Read [How these packs work](docs/how-the-packs-work.md) for a beginner-oriented explanation of the four primitives, MCP, Stop-hook behavior, OCI, and the version boundary. Read [Adding or updating an external skill](docs/adding-or-updating-a-skill.md) for the exact `npx skills` acquisition and review process used here.
+### 2. Describe the capability
 
-## Build, inspect, and extract
+Create `my-first-pack/capabilities/code-review/tuff.toml`:
+
+```toml
+id = "code-review"
+version = "1.0.0"
+type = "skill"
+description = "Review application changes for correctness and maintainability."
+files = ["SKILL.md"]
+```
+
+### 3. Describe the pack
+
+Create `my-first-pack/tuff-pack.toml`:
+
+```toml
+schema = 1
+name = "com.example/code-review"
+version = "1.0.0"
+description = "Our reviewed code-review capability."
+
+[build]
+targets = ["claude"]
+
+[[capabilities]]
+path = "capabilities/code-review"
+```
+
+### 4. Check and build it
 
 ```sh
-tuff pack check packs/csv-data-quality
-tuff pack build packs/csv-data-quality --output dist/csv-data-quality-1.0.0.tuffpack
-tuff pack verify dist/csv-data-quality-1.0.0.tuffpack
-tuff pack inspect dist/csv-data-quality-1.0.0.tuffpack
-tuff pack extract dist/csv-data-quality-1.0.0.tuffpack --agent claude --output dist/csv-runtime
+tuff pack check my-first-pack
+mkdir -p dist
+tuff pack build my-first-pack --output dist/code-review-1.0.0.tuffpack
+tuff pack verify dist/code-review-1.0.0.tuffpack
+tuff pack inspect dist/code-review-1.0.0.tuffpack
 ```
 
-Repeat with `packs/security-review`. Extraction is useful in an application-image build: pull and verify the generic OCI artifact with Tuff, extract its Claude-native filesystem tree, then `COPY` that tree into the image. A `.tuffpack` is an OCI artifact, not a Docker filesystem layer, so Docker cannot use its registry reference in `FROM`.
+You now have a verified, versioned artifact containing your skill.
 
-The executable container-context example is in [container/README.md](container/README.md).
+### 5. Install it into an agent project
 
-## Publish and consume with OCI
-
-Authenticate once using the registry's normal Docker credentials, then push an explicit version tag:
+From a different project:
 
 ```sh
-docker login ghcr.io
-tuff pack push dist/csv-data-quality-1.0.0.tuffpack ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --json
-tuff pack pull ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --output dist/downloaded.tuffpack --json
-tuff pack verify dist/downloaded.tuffpack
+tuff init
+tuff agent add claude
+tuff add pack /absolute/path/to/dist/code-review-1.0.0.tuffpack --agent claude
+tuff list
+tuff check
 ```
 
-Save the immutable `reference` returned by `push` and use that digest reference in deployment automation. Tags are readable release names; digests identify exact bytes. Tuff never assumes `latest` and refuses to move an existing tag unless `--force` is explicitly supplied.
+Tuff renders the skill into `.claude/skills/code-review/` and records the installed capability and pack provenance in `tuff.lock`.
 
-The included publish workflow performs this sequence for tags named `csv-data-quality-v1.0.0` or `security-review-v1.0.0`: build, verify, authenticate, push, pull by the returned digest, compare the bytes, verify again, and extract. It becomes active after this local example is published as a GitHub repository with Packages enabled. See [Publishing and container images](docs/publishing-and-containers.md).
+For a complete walkthrough—including adding tools, hooks, workflows, version updates, and common mistakes—continue with [Package your first Tuff Pack](docs/package-your-first-pack.md).
 
-The workflow's `TUFF_VERSION` environment variable pins the CLI release used in CI. Update it intentionally when adopting a newer Tuff release; changing it can change validation or artifact behavior even when pack sources are unchanged.
+## Explore the complete examples
 
-## Versioning model
+| Pack | Scenario | What it demonstrates |
+| --- | --- | --- |
+| [CSV data quality](packs/csv-data-quality/README.md) | Repair an orders CSV before a data load | External skill, Python/MCP checker, Claude Stop hook, workflow contract |
+| [Security review](packs/security-review/README.md) | Review an intentionally insecure Python service | External skill, deterministic security signals, contextual review, Claude Stop hook |
 
-Pack versions are intentionally separate from the example application's version. If only a scanner rule changes, release `security-review` 1.0.1 without rebuilding the CSV pack. If the application code changes but its reviewed capability set does not, rebuild the application with the same digest-pinned pack.
+Both packs are independently versioned even though they live in one repository. A team can release one without publishing the other.
 
-This example starts each capability at 1.0.0 for readability. In a real team, use semantic versioning and define what counts as a breaking behavioural change before production adoption.
+## More reading
+
+The first guide above is enough to build and install a pack. Read these when you need the underlying details:
+
+- [Package your first Tuff Pack](docs/package-your-first-pack.md) — the full conversion guide and optional tool, hook, and workflow templates.
+- [How these packs work](docs/how-the-packs-work.md) — capability roles, deterministic builds, MCP, Claude Stop hooks, and version boundaries.
+- [Adding or updating an external skill](docs/adding-or-updating-a-skill.md) — using `npx skills`, reviewing third-party content, licensing, and provenance.
+- [Publishing and container images](docs/publishing-and-containers.md) — GHCR, Amazon ECR, immutable digests, promotion, and extracting a pack into an application image.
+- [Container example](container/README.md) — turning an extracted Claude target into a normal Docker filesystem layer.
+
+## Repository helper commands
+
+These are useful after you understand the basic flow:
+
+```sh
+./scripts/check.sh                     # test both complete examples
+./scripts/build.sh dist                # build both packs
+./scripts/prepare-demo.sh security-review
+```
+
+`check.sh` intentionally runs each gate once against a broken fixture and once against a corrected fixture. Seeing a temporary “gate failed” message is expected; the command succeeds when it ends with `All example checks passed.`
+
+All scripts call `tuff` from `PATH`. Set `TUFF_BIN` only when testing a particular local binary, for example `TUFF_BIN=../tuff/target/debug/tuff ./scripts/check.sh`.
