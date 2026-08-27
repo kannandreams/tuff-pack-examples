@@ -1,10 +1,10 @@
 # Package your first Tuff Pack
 
-This guide starts with an agent capability you already use as a loose file and turns it into a versioned `.tuffpack`. It then shows how to add the other capability types when you need them.
+This guide starts with capabilities already used by an agent project and turns their accepted Tuff state into a versioned `.tuffpack`. It then explains tools, hooks, workflows, and the lower-level standalone source layout.
 
 ## The goal
 
-Suppose your repository currently contains a Claude skill:
+Suppose your agent project contains a Claude skill:
 
 ```text
 your-agent-project/
@@ -14,28 +14,15 @@ your-agent-project/
         SKILL.md
 ```
 
-That file works locally, but it has no independent release identity. It is difficult to answer which version is installed in another agent, reuse exactly the same reviewed bytes, or promote it between environments.
-
-We will create this source pack:
+That file works locally, but loose files have no independent release identity. We will track it in place and build this artifact without copying it:
 
 ```text
-my-first-pack/
-  tuff-pack.toml
-  capabilities/
-    code-review/
-      tuff.toml
-      SKILL.md
-```
-
-and build this artifact:
-
-```text
-dist/code-review-1.0.0.tuffpack
+tuff-dist/code-review-capabilities-1.0.0.tuffpack
 ```
 
 ## Before you begin
 
-Install Tuff 0.1.3 or newer:
+Install Tuff 0.1.4 or newer:
 
 ```sh
 uv tool install tuffcli
@@ -44,136 +31,115 @@ tuff --version
 
 If `tuff` is already managed by `uv`, use `uv tool upgrade tuffcli` for later upgrades.
 
-## Step 1: create the portable source directory
+## Step 1: initialize and adopt the skill
 
-From the directory where you want to maintain the pack source:
+Run these commands inside `your-agent-project`:
 
 ```sh
-mkdir -p my-first-pack/capabilities/code-review
-cp your-agent-project/.claude/skills/code-review/SKILL.md my-first-pack/capabilities/code-review/SKILL.md
+tuff init
+tuff agent add claude
+tuff agent set-default claude
+tuff add skill .claude/skills/code-review --agent claude
+tuff list
+tuff check
 ```
 
-The source directory is deliberately independent of `.claude`. Tuff adapters turn the same source capability into harness-native files at build or installation time.
+Tuff recognizes the existing harness-native path, keeps the skill in place, and adds `code-review` to `tuff.lock`. The lock entry records its accepted version, installed target, and content hashes.
 
-Do not point a pack member back into the consuming agent project. Every member must be a local directory beneath the pack root so the artifact is self-contained and reproducible.
+## Step 2: build one pack from tracked state
 
-## Step 2: add the capability manifest
-
-Create `my-first-pack/capabilities/code-review/tuff.toml`:
-
-```toml
-id = "code-review"
-version = "1.0.0"
-type = "skill"
-description = "Review application changes for correctness and maintainability."
-files = ["SKILL.md"]
+```sh
+tuff pack build --name code-review-capabilities --version 1.0.0
 ```
 
-The fields mean:
+The output is `tuff-dist/code-review-capabilities-1.0.0.tuffpack`. Tuff selects every project-scoped tracked capability except `tuff-cli-guide`, uses the project's default agent target, and refuses to overwrite an existing artifact.
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Stable identity used when Tuff installs and tracks the capability. |
-| `version` | Release version of this individual capability. |
-| `type` | Capability primitive: `skill`, `tool`, `hook`, or `workflow`. |
-| `description` | Short explanation shown in metadata and inspection output. |
-| `files` | Every source file that belongs to this capability. |
+To build only this skill in a project that tracks more capabilities:
 
-The capability version and pack version are separate. They can begin together at 1.0.0 and diverge later when only one member changes.
+```sh
+tuff pack build \
+  --name code-review-capabilities \
+  --version 1.0.0 \
+  --capability code-review \
+  --agent claude
+```
 
-## Step 3: add the pack manifest
+## Step 3: understand the accepted-state check
 
-Create `my-first-pack/tuff-pack.toml`:
+Project builds do not blindly archive current files. Tuff verifies that the installed capability is clean and that its reconstructable source produces the accepted lockfile baseline. If you intentionally edit `.claude/skills/code-review/SKILL.md`, accept the new baseline first:
+
+```sh
+tuff diff code-review
+tuff update code-review
+tuff pack build --name code-review-capabilities --version 1.0.1
+```
+
+An unaccepted change causes the build to fail without creating an artifact. This keeps “pack version 1.0.0” tied to a known project state.
+
+## Step 4: verify and inspect
+
+```sh
+tuff pack verify tuff-dist/code-review-capabilities-1.0.0.tuffpack
+tuff pack inspect tuff-dist/code-review-capabilities-1.0.0.tuffpack
+```
+
+`verify` checks the artifact structure, metadata, stored files, and whole-artifact digest. `inspect` prints the pack identity, member versions, targets, and digest. Integrity does not establish publisher trust, so consumers still review the source and publisher.
+
+## Step 5: save the selection for repeated releases
+
+One-shot build writes only the `.tuffpack`. If the selection itself should be reviewed and committed, create a reusable definition:
+
+```sh
+tuff pack init code-review-capabilities \
+  --from-project \
+  --version 1.0.0 \
+  --capability code-review \
+  --agent claude
+```
+
+Tuff creates `tuff-packs/code-review-capabilities/tuff-pack.toml`:
 
 ```toml
 schema = 1
-name = "com.example/code-review"
+name = "code-review-capabilities"
 version = "1.0.0"
-description = "Our reviewed code-review capability."
+description = "Project capability pack code-review-capabilities."
 
 [build]
 targets = ["claude"]
 
-[[capabilities]]
-path = "capabilities/code-review"
+[project]
+capabilities = ["code-review"]
 ```
 
-`name` is the pack's stable identity. Replace `com.example` with an organization or namespace you control. `targets` tells Tuff which harness-native output to render. Each `[[capabilities]]` entry points to a directory containing a `tuff.toml`.
-
-## Step 4: validate the source
+There is no copied `capabilities/` directory. Build the definition with:
 
 ```sh
-tuff pack check my-first-pack
+tuff pack check tuff-packs/code-review-capabilities
+tuff pack build tuff-packs/code-review-capabilities
 ```
 
-Fix every reported manifest, path, compatibility, or workflow dependency error before building. Checking does not execute packaged tools or hooks.
-
-## Step 5: build the artifact
-
-```sh
-mkdir -p dist
-tuff pack build my-first-pack --output dist/code-review-1.0.0.tuffpack
-```
-
-The output is one deterministic `.tuffpack` file. Tuff refuses unsafe source paths and does not silently overwrite an existing output file.
-
-Use a filename containing the pack version so releases remain obvious when several artifacts are stored together.
-
-## Step 6: verify and inspect it
-
-```sh
-tuff pack verify dist/code-review-1.0.0.tuffpack
-tuff pack inspect dist/code-review-1.0.0.tuffpack
-```
-
-`verify` checks the artifact structure, metadata, and stored file digests. `inspect` prints the pack identity, members, targets, and artifact digest.
-
-Verification proves that the artifact has not changed since it was built. It does not prove who authored or reviewed it.
-
-## Step 7: test-install it in a clean project
-
-Test the artifact in a clean directory before replacing the original loose capability:
+## Step 6: install the artifact in a clean project
 
 ```sh
 mkdir pack-consumer
 cd pack-consumer
 tuff init
 tuff agent add claude
-tuff agent set-default claude
-tuff add pack /absolute/path/to/dist/code-review-1.0.0.tuffpack --agent claude
+tuff add pack /absolute/path/to/tuff-dist/code-review-capabilities-1.0.0.tuffpack --agent claude
 tuff list
 tuff check
 ```
 
-Tuff verifies the complete artifact before changing the project. For this skill, it renders `.claude/skills/code-review/SKILL.md` and records the capability plus pack provenance in `tuff.lock`.
+Tuff verifies and stages the complete artifact before changing the consumer. It renders `.claude/skills/code-review/SKILL.md` and records both the individual capability identity and pack provenance in the consumer's `tuff.lock`.
 
-Use an absolute artifact path in the first exercise to avoid confusion about which directory relative paths are resolved from.
+## Step 7: release changes as new versions
 
-## Step 8: migrate the original project
+When behavior changes, accept the capability update, build a new pack version, verify it, and test it in a clean consumer. Do not replace a released `.tuffpack`; a new behavior should have a new pack version and digest.
 
-The original project still contains `.claude/skills/code-review/`. Tuff will not silently overwrite that untracked directory when installing the pack.
+## Advanced: add tools, hooks, and workflows to a standalone source pack
 
-To migrate safely:
-
-1. confirm the loose skill is committed to version control or backed up;
-2. confirm the pack contains the same reviewed files by testing the clean installation;
-3. remove the original loose `.claude/skills/code-review/` directory from the consuming project;
-4. run `tuff add pack /absolute/path/to/dist/code-review-1.0.0.tuffpack --agent claude` in that project;
-5. run `tuff list` and `tuff check`, then review the generated files and `tuff.lock` diff.
-
-This handoff is deliberate: refusing the collision prevents a pack installation from silently replacing user-managed agent instructions.
-
-## Step 9: change and release it
-
-When the skill instructions change:
-
-1. edit the source `my-first-pack/capabilities/code-review/SKILL.md`;
-2. bump the capability version in its `tuff.toml`;
-3. bump the pack version in `tuff-pack.toml`;
-4. check, build, verify, and inspect a new versioned output file;
-5. review the diff and test the new artifact in an agent project.
-
-Do not replace an already released `.tuffpack`. A new behavior should have a new version and digest.
+The examples below show the lower-level `standalone-pack/capabilities/` layout. You only need this layout when the pack source is maintained separately from an initialized agent project. In a project-backed workflow, create or add the tool, hook, and workflow normally, then select their tracked IDs with `tuff pack build --name ...`.
 
 ## Add a tool when instructions need deterministic execution
 
@@ -182,7 +148,7 @@ A skill tells an agent how to reason. A tool gives it a structured executable op
 A minimal tool source looks like:
 
 ```text
-my-first-pack/capabilities/review-check/
+standalone-pack/capabilities/review-check/
   tuff.toml
   check.py
 ```
@@ -208,7 +174,7 @@ mcp = true
 runtime_deps = ["python>=3.9"]
 ```
 
-Add another `[[capabilities]]` entry to `tuff-pack.toml`:
+Add another `[[capabilities]]` entry to the standalone pack's `tuff-pack.toml`:
 
 ```toml
 [[capabilities]]
@@ -222,7 +188,7 @@ Tuff records runtime dependencies but does not install them. The destination env
 A hook connects a command to an agent lifecycle event. See the complete [CSV data-quality Stop hook](../packs/csv-data-quality/capabilities/require-data-quality/) for a working example.
 
 ```text
-my-first-pack/capabilities/require-review/
+standalone-pack/capabilities/require-review/
   tuff.toml
   gate.py
 ```
@@ -249,7 +215,7 @@ Claude Stop hooks must handle `stop_hook_active` to avoid repeatedly blocking th
 A workflow declares dependencies between capabilities. It does not orchestrate steps at runtime.
 
 ```text
-my-first-pack/capabilities/code-review-workflow/
+standalone-pack/capabilities/code-review-workflow/
   tuff.toml
 ```
 
@@ -272,14 +238,14 @@ id = "require-review"
 type = "hook"
 ```
 
-After adding the workflow to `tuff-pack.toml`, `tuff pack check` will reject the pack if a required capability is missing or has the wrong type.
+After adding the workflow to the standalone pack's `tuff-pack.toml`, `tuff pack check` will reject the pack if a required capability is missing or has the wrong type. For a project-backed pack, selecting the workflow automatically adds these requirements to `tuff-packs/<name>/tuff-pack.toml`.
 
 ## Extract instead of installing
 
 Installation creates or updates Tuff project state. Infrastructure builds often need only the rendered harness files:
 
 ```sh
-tuff pack extract dist/code-review-1.0.0.tuffpack --agent claude --output runtime-bundle
+tuff pack extract tuff-dist/code-review-capabilities-1.0.0.tuffpack --agent claude --output runtime-bundle
 ```
 
 The output directory must be missing or empty. The extracted tree can be copied into an application image or another prepared runtime. Read [Publishing and container images](publishing-and-containers.md) before using this in deployment automation.

@@ -24,8 +24,8 @@ agent application image
 
 ```sh
 docker login ghcr.io
-./scripts/build.sh dist
-tuff pack push dist/csv-data-quality-1.0.0.tuffpack ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --json
+./scripts/build.sh .work/artifacts
+tuff pack push .work/artifacts/csv-data-quality-1.0.0.tuffpack ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --json
 ```
 
 The response includes two digests. The artifact digest identifies the `.tuffpack` bytes. The OCI manifest digest identifies the registry envelope and is used in the returned immutable `reference`. Record both in release metadata; deploy using the digest reference.
@@ -37,7 +37,7 @@ Create the repository once, authenticate Docker, then use the same Tuff command:
 ```sh
 aws ecr create-repository --repository-name tuff-pack-examples
 aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com
-tuff pack push dist/csv-data-quality-1.0.0.tuffpack ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/tuff-pack-examples:csv-data-quality-v1.0.0 --json
+tuff pack push .work/artifacts/csv-data-quality-1.0.0.tuffpack ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/tuff-pack-examples:csv-data-quality-v1.0.0 --json
 ```
 
 Tuff reads credentials written by `docker login`. The ECR authentication token expires, so CI should authenticate immediately before pushing or pulling.
@@ -47,9 +47,9 @@ Tuff reads credentials written by `docker login`. The ECR authentication token e
 Pull and extract before invoking Docker, or do it in a build stage that has a pinned Tuff binary. A simple pre-build flow is easier to audit:
 
 ```sh
-tuff pack pull "$TUFF_PACK_REF" --output capability.tuffpack
-tuff pack verify capability.tuffpack
-tuff pack extract capability.tuffpack --agent claude --output capability-runtime
+tuff pack pull "$TUFF_PACK_REF" --output .work/artifacts/capability.tuffpack
+tuff pack verify .work/artifacts/capability.tuffpack
+tuff pack extract .work/artifacts/capability.tuffpack --agent claude --output .work/artifacts/capability-runtime
 docker build --build-arg CAPABILITY_PACK_REF="$TUFF_PACK_REF" -t example-agent:1.0.0 .
 ```
 
@@ -70,4 +70,4 @@ The label makes the capability identity inspectable on the final application ima
 
 Prefer promoting the same immutable pack digest between development, staging, and production rather than rebuilding from source in each environment. Registry-specific copying or a controlled pull-and-push can mirror the object. Verify after every copy and retain the digest reference in deployment metadata.
 
-OCI transport detects changed bytes. It does not prove who published them. Tuff 0.1.3 does not yet enforce signatures or attestations, so registry permissions, protected release workflows, and digest pinning are still part of the trust model.
+OCI transport detects changed bytes. It does not prove who published them. Tuff 0.1.4 does not yet enforce signatures or attestations, so registry permissions, protected release workflows, and digest pinning are still part of the trust model.

@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  TUFF_VERSION: "0.1.3"
+  TUFF_VERSION: "0.1.4"
 
 jobs:
   check:

@@ -21,7 +21,7 @@ If it is already installed with `uv`, upgrade it with:
 uv tool upgrade tuffcli
 ```
 
-Tuff Pack commands require Tuff 0.1.3 or newer.
+The simplified project-pack commands require Tuff 0.1.4 or newer.
 
 The interactive demos also require Python 3.9 or newer and Claude Code.
 
@@ -38,7 +38,7 @@ cd tuff-pack-examples
 ./scripts/prepare-demo.sh csv-data-quality
 ```
 
-The script builds the pack, creates a disposable agent project under `.work/csv-data-quality`, installs the pack for Claude, and checks the installed files.
+The script builds the pack, keeps the artifact at `.work/artifacts/csv-data-quality-1.0.0.tuffpack`, creates a disposable agent project under `.work/csv-data-quality`, installs the pack for Claude, and checks the installed files.
 
 ### 4. See what was installed
 
@@ -53,6 +53,13 @@ You will see four capabilities:
 - a tool that performs a deterministic data-quality check;
 - a hook that runs the check before Claude finishes;
 - a workflow that declares that the other three capabilities belong together.
+
+Inspect the exact artifact that was installed:
+
+```sh
+cd ../..
+tuff pack inspect .work/artifacts/csv-data-quality-1.0.0.tuffpack
+```
 
 ### 5. Run the agent
 
@@ -76,85 +83,102 @@ cd .work/security-review
 claude
 ```
 
-## Package your own capability
+## Package capabilities from your own agent project
 
-Start with one capability. A pack does not need to contain every capability type.
+You do not need to copy capabilities into a second `my-first-pack/` directory. Tuff can package capabilities it already tracks.
 
-Assume you already have this Claude skill:
+Assume your agent project contains `.claude/skills/code-review/SKILL.md`.
 
-```text
-.claude/skills/code-review/SKILL.md
-```
+### 1. Track the existing capability
 
-### 1. Create a portable pack source
-
-```text
-my-first-pack/
-  tuff-pack.toml
-  capabilities/
-    code-review/
-      tuff.toml
-      SKILL.md
-```
-
-Copy your existing `SKILL.md` into `my-first-pack/capabilities/code-review/`. The pack source does not use a `.claude` directory because Tuff will render the correct harness layout later.
-
-### 2. Describe the capability
-
-Create `my-first-pack/capabilities/code-review/tuff.toml`:
-
-```toml
-id = "code-review"
-version = "1.0.0"
-type = "skill"
-description = "Review application changes for correctness and maintainability."
-files = ["SKILL.md"]
-```
-
-### 3. Describe the pack
-
-Create `my-first-pack/tuff-pack.toml`:
-
-```toml
-schema = 1
-name = "com.example/code-review"
-version = "1.0.0"
-description = "Our reviewed code-review capability."
-
-[build]
-targets = ["claude"]
-
-[[capabilities]]
-path = "capabilities/code-review"
-```
-
-### 4. Check and build it
-
-```sh
-tuff pack check my-first-pack
-mkdir -p dist
-tuff pack build my-first-pack --output dist/code-review-1.0.0.tuffpack
-tuff pack verify dist/code-review-1.0.0.tuffpack
-tuff pack inspect dist/code-review-1.0.0.tuffpack
-```
-
-You now have a verified, versioned artifact containing your skill.
-
-### 5. Install it into an agent project
-
-From a different project:
+Run these commands in that agent project:
 
 ```sh
 tuff init
 tuff agent add claude
-tuff add pack /absolute/path/to/dist/code-review-1.0.0.tuffpack --agent claude
+tuff agent set-default claude
+tuff add skill .claude/skills/code-review --agent claude
+tuff check
+```
+
+`tuff add` adopts the skill in place and records its accepted baseline in `tuff.lock`; it does not require you to move the file.
+
+### 2. Build the accepted capabilities
+
+```sh
+tuff pack build --name code-review-capabilities --version 1.0.0
+```
+
+The command selects all project-scoped capabilities except the automatic Tuff CLI guide and writes:
+
+```text
+tuff-dist/code-review-capabilities-1.0.0.tuffpack
+```
+
+Choose only some capabilities with repeatable `--capability <id>` flags. Selecting a workflow automatically adds its tracked requirements.
+
+### 3. Verify and inspect
+
+```sh
+tuff pack verify tuff-dist/code-review-capabilities-1.0.0.tuffpack
+tuff pack inspect tuff-dist/code-review-capabilities-1.0.0.tuffpack
+```
+
+If the skill has unaccepted changes, the build stops and tells you to run `tuff update code-review`. No artifact is written until the project and source match the accepted baseline.
+
+### 4. Save a reusable selection when needed
+
+One-shot build is enough for many projects. For a pack that always contains a selected set, create an ID-based definition:
+
+```sh
+tuff pack init code-review-capabilities \
+  --from-project \
+  --version 1.0.0 \
+  --capability code-review
+tuff pack build tuff-packs/code-review-capabilities
+```
+
+The generated `tuff-packs/code-review-capabilities/tuff-pack.toml` refers to tracked IDs. It does not copy `.claude` files.
+
+### 5. Install it into another agent project
+
+```sh
+tuff init
+tuff agent add claude
+tuff add pack /absolute/path/to/tuff-dist/code-review-capabilities-1.0.0.tuffpack --agent claude
 tuff list
 tuff check
 ```
 
-Tuff renders the skill into `.claude/skills/code-review/` and records the installed capability and pack provenance in `tuff.lock`.
+For tools, hooks, workflows, standalone source-pack authoring, version updates, and common mistakes, continue with [Package your first Tuff Pack](docs/package-your-first-pack.md).
 
-For a complete walkthrough—including adding tools, hooks, workflows, version updates, and common mistakes—continue with [Package your first Tuff Pack](docs/package-your-first-pack.md).
+## From registries to a container image
+
+Application images and Tuff packs travel through separate OCI lanes:
+
+```text
+application source → docker build → container image → docker push / pull ─┐
+                                                                          ├→ Dockerfile COPY → agent image
+tracked capabilities → tuff pack build → .tuffpack → tuff pack push / pull → extract ┘
+```
+
+For GHCR, authenticate once and publish the capability artifact with Tuff:
+
+```sh
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_USER" --password-stdin
+tuff pack push \
+  tuff-dist/code-review-capabilities-1.0.0.tuffpack \
+  ghcr.io/OWNER/code-review-capabilities:1.0.0
+tuff pack pull \
+  ghcr.io/OWNER/code-review-capabilities:1.0.0 \
+  --output build/code-review-capabilities-1.0.0.tuffpack
+tuff pack extract \
+  build/code-review-capabilities-1.0.0.tuffpack \
+  --agent claude \
+  --output build/capability-runtime
+```
+
+Docker cannot use the Tuff reference in `FROM`. Copy `build/capability-runtime` into the normal application image as shown in [Publishing and container images](docs/publishing-and-containers.md).
 
 ## Explore the complete examples
 
@@ -181,7 +205,7 @@ These are useful after you understand the basic flow:
 
 ```sh
 ./scripts/check.sh                     # test both complete examples
-./scripts/build.sh dist                # build both packs
+./scripts/build.sh .work/artifacts     # build both packs and keep the artifacts
 ./scripts/prepare-demo.sh security-review
 ```
 
