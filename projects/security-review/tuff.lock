@@ -1,0 +1,61 @@
+# Tuff lockfile. Each entry records one capability installation target.
+version = 1
+
+[[capabilities]]
+name = "require-security-review"
+type = "hook"
+source = "local"
+source_path = "agent-capabilities/require-security-review"
+resolved_ref = ""
+sha256 = "14418a94083f36a10cf9ae7791b48e3b7f74c3cea4ed134c9dfb7a3d7bc62a05"
+target = "claude"
+installed_path = ".claude/hooks/require-security-review"
+version = "1.0.0"
+description = "Rerun the deterministic security baseline before Claude finishes and block on signals."
+ownership = "generated"
+
+[[capabilities.managed_hooks]]
+settingsPath = ".claude/settings.json"
+event = "Stop"
+canonicalEvent = "stop"
+command = "sh .claude/hooks/require-security-review/run.sh"
+baselineHash = "21cbc3c7380c1e7c6903fc429e1928a964ceb90d5e4cc3702909e3f5ab3bff44"
+
+[[capabilities]]
+name = "secure-release-review"
+type = "workflow"
+source = "local"
+source_path = "agent-capabilities/secure-release-review"
+resolved_ref = ""
+sha256 = "f0efa04408269a55dcc2f0c40fa3e582b28b1356a45c1f759a79f1c04323d993"
+target = "claude"
+installed_path = ".claude/workflows/secure-release-review"
+version = "1.0.0"
+description = "Contract requiring contextual security review, a deterministic baseline, and a Stop gate."
+ownership = "generated"
+
+[[capabilities]]
+name = "security-baseline-scan"
+type = "tool"
+source = "local"
+source_path = "agent-capabilities/security-baseline-scan"
+resolved_ref = ""
+sha256 = "89cf3a23de91ac57289ae4132b786bd009c75c714b6d6775fb16f5939a9c560c"
+target = "claude"
+installed_path = ".claude/tools/security-baseline-scan"
+version = "1.0.0"
+description = "Find a small, deterministic set of security signals in project-local source files."
+ownership = "generated"
+
+[[capabilities]]
+name = "security-review"
+type = "skill"
+source = "local"
+source_path = "agent-capabilities/security-review"
+resolved_ref = ""
+sha256 = "8f7b76d4fdc6ee7d0f65e00a59707bc2b8537e6b46d05e6059995c982b5b00b6"
+target = "claude"
+installed_path = ".claude/skills/security-review"
+version = "1.0.0"
+description = "Review project code for security risks, validate context, and propose human-reviewed fixes."
+ownership = "generated"

@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  TUFF_VERSION: "0.1.4"
+  TUFF_VERSION: "0.1.5"
 
 jobs:
   publish:
@@ -39,14 +39,13 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_REF_NAME" in
-            csv-data-quality-v*) pack=csv-data-quality; version="${GITHUB_REF_NAME#csv-data-quality-v}" ;;
-            security-review-v*) pack=security-review; version="${GITHUB_REF_NAME#security-review-v}" ;;
+            csv-data-quality-v*) pack=csv-data-quality; agent=open-agents; version="${GITHUB_REF_NAME#csv-data-quality-v}" ;;
+            security-review-v*) pack=security-review; agent=claude; version="${GITHUB_REF_NAME#security-review-v}" ;;
             *) echo "unsupported release tag: $GITHUB_REF_NAME" >&2; exit 2 ;;
           esac
-          manifest_version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "packs/$pack/tuff-pack.toml" | head -n 1)
-          test "$version" = "$manifest_version" || { echo "tag version $version does not match pack version $manifest_version" >&2; exit 2; }
           owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           echo "pack=$pack" >> "$GITHUB_OUTPUT"
+          echo "agent=$agent" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "artifact=.work/artifacts/$pack-$version.tuffpack" >> "$GITHUB_OUTPUT"
           echo "registry_ref=ghcr.io/$owner/tuff-pack-examples:$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
@@ -56,9 +55,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .work/artifacts
-          ./tuff pack check "packs/${{ steps.release.outputs.pack }}"
-          ./tuff pack build "packs/${{ steps.release.outputs.pack }}" --output "${{ steps.release.outputs.artifact }}"
-          ./tuff pack verify "${{ steps.release.outputs.artifact }}"
+          cd "projects/${{ steps.release.outputs.pack }}"
+          "$GITHUB_WORKSPACE/tuff" check
+          "$GITHUB_WORKSPACE/tuff" pack build --name "${{ steps.release.outputs.pack }}-capabilities" --version "${{ steps.release.outputs.version }}" --output "$GITHUB_WORKSPACE/${{ steps.release.outputs.artifact }}"
+          "$GITHUB_WORKSPACE/tuff" pack verify "$GITHUB_WORKSPACE/${{ steps.release.outputs.artifact }}"
 
       - name: Authenticate to GHCR
         shell: bash
@@ -83,7 +83,7 @@ jobs:
           ./tuff pack pull "${{ steps.push.outputs.immutable_ref }}" --output .work/artifacts/pulled.tuffpack --json > .work/artifacts/pull.json
           cmp "${{ steps.release.outputs.artifact }}" .work/artifacts/pulled.tuffpack
           ./tuff pack verify .work/artifacts/pulled.tuffpack
-          ./tuff pack extract .work/artifacts/pulled.tuffpack --agent claude --output .work/artifacts/runtime
+          ./tuff pack extract .work/artifacts/pulled.tuffpack --agent "${{ steps.release.outputs.agent }}" --output .work/artifacts/runtime
 
       - name: Upload release evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

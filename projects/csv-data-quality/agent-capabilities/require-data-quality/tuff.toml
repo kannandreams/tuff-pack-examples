@@ -1,0 +1,10 @@
+id = "require-data-quality"
+version = "1.0.0"
+type = "hook"
+description = "Rerun the CSV quality check before an Open Agents session finishes and block on findings."
+files = ["gate.py", "README.md"]
+
+[hook]
+event = "before_finish"
+command = "python3 .agents/hooks/require-data-quality/gate.py"
+working_directory = "."

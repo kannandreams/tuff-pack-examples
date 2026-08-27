@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "csv-quality-check": {
+      "args": [
+        ".agents/tools/csv-quality-check/server.py"
+      ],
+      "command": "python3"
+    }
+  }
+}

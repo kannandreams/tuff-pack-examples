@@ -10,8 +10,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CSV_SERVER = ROOT / "packs/csv-data-quality/capabilities/csv-quality-check/server.py"
-SECURITY_SERVER = ROOT / "packs/security-review/capabilities/security-baseline-scan/server.py"
+CSV_SERVER = ROOT / "projects/csv-data-quality/agent-capabilities/csv-quality-check/server.py"
+SECURITY_SERVER = ROOT / "projects/security-review/agent-capabilities/security-baseline-scan/server.py"
 
 
 def load_module(name: str, path: Path):
@@ -27,7 +27,7 @@ class ToolTests(unittest.TestCase):
         csv_tool = load_module("csv_quality_check_test", CSV_SERVER)
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
-            shutil.copytree(ROOT / "demos/csv-data-quality", project, dirs_exist_ok=True)
+            shutil.copytree(ROOT / "projects/csv-data-quality", project, dirs_exist_ok=True)
             failed = csv_tool.check_csv(project)
             self.assertEqual(failed["status"], "fail")
             self.assertEqual({item["code"] for item in failed["findings"]}, {"null_value", "duplicate_key", "below_minimum", "invalid_number"})
@@ -40,7 +40,7 @@ class ToolTests(unittest.TestCase):
         security_tool = load_module("security_baseline_scan_test", SECURITY_SERVER)
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
-            shutil.copytree(ROOT / "demos/security-review", project, dirs_exist_ok=True)
+            shutil.copytree(ROOT / "projects/security-review", project, dirs_exist_ok=True)
             failed = security_tool.scan(project)
             self.assertEqual(failed["status"], "fail")
             self.assertEqual({item["code"] for item in failed["signals"]}, {"hardcoded_secret", "dynamic_evaluation", "shell_subprocess", "interpolated_sql"})

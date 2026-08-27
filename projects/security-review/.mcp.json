@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "security-baseline-scan": {
+      "args": [
+        ".claude/tools/security-baseline-scan/server.py"
+      ],
+      "command": "python3"
+    }
+  }
+}

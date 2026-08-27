@@ -1,0 +1,74 @@
+# Tuff lockfile. Each entry records one capability installation target.
+version = 1
+
+[[capabilities]]
+name = "csv-data-quality-review"
+type = "workflow"
+source = "local"
+source_path = "agent-capabilities/csv-data-quality-review"
+resolved_ref = ""
+sha256 = "c1fd21c5ea48b81c80fda25abf596c9c778e81313a5821754ffc9319f66d3834"
+target = "open-agents"
+installed_path = ".agents/workflows/csv-data-quality-review"
+version = "1.0.0"
+description = "Contract requiring CSV reasoning, deterministic checking, and a before-finish gate to travel together."
+ownership = "generated"
+
+[[capabilities]]
+name = "csv-quality-check"
+type = "tool"
+source = "local"
+source_path = "agent-capabilities/csv-quality-check"
+resolved_ref = ""
+sha256 = "0deb494a3931e51d323c154d7453f4de7350e6c57e91477cdb4ae9a291ce0bc2"
+target = "open-agents"
+installed_path = ".agents/tools/csv-quality-check"
+version = "1.0.0"
+description = "Validate a project-local CSV against a deterministic JSON quality policy."
+ownership = "generated"
+
+[[capabilities]]
+name = "csv-workbench"
+type = "skill"
+source = "local"
+source_path = "agent-capabilities/csv-workbench"
+resolved_ref = ""
+sha256 = "4526b30ff5e322419d5d264470ac029f6c5eb930694b7eeb3d671b9637e4c58b"
+target = "open-agents"
+installed_path = ".agents/skills/csv-workbench"
+version = "1.0.0"
+description = "Inspect, repair, and summarize project-local CSV data with a deterministic quality check."
+ownership = "generated"
+
+[[capabilities]]
+name = "require-data-quality"
+type = "hook"
+source = "local"
+source_path = "agent-capabilities/require-data-quality"
+resolved_ref = ""
+sha256 = "fb8437922cc40f2160f71c33d880190e0d45ccc85bb2d04bcd0c1baa69078c1a"
+target = "open-agents"
+installed_path = ".agents/hooks/require-data-quality"
+version = "1.0.0"
+description = "Rerun the CSV quality check before an Open Agents session finishes and block on findings."
+ownership = "generated"
+
+[[capabilities.managed_hooks]]
+settingsPath = ".agents/hook.json"
+event = "before_finish"
+canonicalEvent = "before_finish"
+command = "sh .agents/hooks/require-data-quality/run.sh"
+baselineHash = "09c6cf484726b401aac81cbadcb5c77437dbbf766b145d19fb6a0fce629f0c6b"
+
+[[capabilities]]
+name = "tuff-cli-guide"
+type = "skill"
+source = "local"
+source_path = ""
+resolved_ref = ""
+sha256 = "c064da9287fb2e533f41ddc73e9136dce8844cec7b71cfdad5e318cdae99d02a"
+target = "open-agents"
+installed_path = ".agents/skills/tuff-cli-guide"
+version = "0.1.0"
+description = "Guide for using Tuff CLI commands inside this repository."
+ownership = "generated"
