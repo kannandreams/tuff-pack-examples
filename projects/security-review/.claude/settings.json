@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "sh .claude/hooks/require-security-review/run.sh",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

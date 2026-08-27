@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "before_finish": [
+      {
+        "hooks": [
+          {
+            "command": "sh .agents/hooks/require-data-quality/run.sh",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

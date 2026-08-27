@@ -70,4 +70,4 @@ The label makes the capability identity inspectable on the final application ima
 
 Prefer promoting the same immutable pack digest between development, staging, and production rather than rebuilding from source in each environment. Registry-specific copying or a controlled pull-and-push can mirror the object. Verify after every copy and retain the digest reference in deployment metadata.
 
-OCI transport detects changed bytes. It does not prove who published them. Tuff 0.1.4 does not yet enforce signatures or attestations, so registry permissions, protected release workflows, and digest pinning are still part of the trust model.
+OCI transport detects changed bytes. It does not prove who published them. Tuff 0.1.5 does not yet enforce signatures or attestations, so registry permissions, protected release workflows, and digest pinning are still part of the trust model.

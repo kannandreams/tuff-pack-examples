@@ -1,6 +1,6 @@
 # Adding or updating an external skill
 
-This repository used the `skills` CLI to discover and acquire real Agent Skills, then copied and adapted them into Tuff capability directories. Builds and agent sessions never fetch skill content from the network.
+This repository used the `skills` CLI to discover and acquire real Agent Skills, then reviewed and adapted them into each project’s `agent-capabilities/` source. Builds and agent sessions never fetch skill content from the network.
 
 The CSV skill was acquired with:
 
@@ -18,13 +18,14 @@ DISABLE_TELEMETRY=1 npx --yes skills add github/awesome-copilot --skill security
 
 After acquisition, this repository:
 
-1. copied the selected skill into `packs/<pack>/capabilities/<skill>`;
+1. placed the selected skill under `projects/<project>/agent-capabilities/<skill>`;
 2. added a Tuff `tuff.toml` listing every shipped file;
 3. retained the upstream MIT license;
 4. recorded the repository revision, retrieval command, and pre-adaptation content hash in `UPSTREAM.md`;
 5. adapted the instructions to project-relative paths and the pack's deterministic MCP tool;
-6. added the skill as a requirement of the pack's workflow;
-7. built and verified the complete pack twice to check deterministic output.
+6. installed and tracked the skill for the project’s selected agent with `tuff add skill`;
+7. added the skill as a requirement of the project workflow;
+8. built and verified the complete project-backed pack twice to check deterministic output.
 
 To update a skill, acquire the new revision in a temporary directory, inspect the upstream diff, reapply local adaptations deliberately, update provenance, and bump the capability and pack versions. Do not overwrite the committed skill blindly: local tool names, safety constraints, and workflow instructions are part of the reviewed behavior.
 

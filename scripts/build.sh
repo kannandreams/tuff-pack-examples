@@ -21,10 +21,11 @@ if [ -d "$OUTPUT" ] && [ -n "$(find "$OUTPUT" -mindepth 1 -maxdepth 1 -print -qu
 fi
 mkdir -p "$OUTPUT"
 
-cd "$REPO_ROOT"
-"$TUFF_COMMAND" pack build packs/csv-data-quality --output "$OUTPUT/csv-data-quality-1.0.0.tuffpack"
+cd "$REPO_ROOT/projects/csv-data-quality"
+"$TUFF_COMMAND" pack build --name csv-data-quality-capabilities --version 1.0.0 --output "$OUTPUT/csv-data-quality-1.0.0.tuffpack"
 "$TUFF_COMMAND" pack verify "$OUTPUT/csv-data-quality-1.0.0.tuffpack"
-"$TUFF_COMMAND" pack build packs/security-review --output "$OUTPUT/security-review-1.0.0.tuffpack"
+cd "$REPO_ROOT/projects/security-review"
+"$TUFF_COMMAND" pack build --name security-review-capabilities --version 1.0.0 --output "$OUTPUT/security-review-1.0.0.tuffpack"
 "$TUFF_COMMAND" pack verify "$OUTPUT/security-review-1.0.0.tuffpack"
 
 echo "Built verified packs in $OUTPUT"
