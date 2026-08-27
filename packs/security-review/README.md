@@ -11,7 +11,21 @@ This pack demonstrates how a reusable security-review capability layer can remai
 
 The baseline is not a security guarantee. Pattern matching can produce false positives and miss real vulnerabilities. The skill is responsible for contextual validation, and a human remains responsible for reviewing proposed fixes and release decisions.
 
-## Try it
+## Build it manually
+
+```sh
+tuff pack check packs/security-review
+tuff pack build packs/security-review \
+  --output .work/artifacts/security-review-1.0.0.tuffpack
+tuff pack verify .work/artifacts/security-review-1.0.0.tuffpack
+tuff pack inspect .work/artifacts/security-review-1.0.0.tuffpack
+```
+
+The pack source stays in this directory. Tuff reads the declared capability members and writes one portable artifact; it does not need a helper script or a second copied pack directory.
+
+## Run it with Claude
+
+For a disposable consumer project, use the repository helper:
 
 ```sh
 ./scripts/prepare-demo.sh security-review

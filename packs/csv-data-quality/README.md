@@ -11,9 +11,23 @@ This pack demonstrates a data-engineering capability layer. The application may 
 
 The pack is version 1.0.0. Every member also has its own 1.0.0 version because Tuff tracks installed capabilities individually. These version axes can diverge later: a pack 1.1.0 could contain a checker 1.2.0 and unchanged skill 1.0.0.
 
-## Try it
+## Build it manually
 
 From the repository root:
+
+```sh
+tuff pack check packs/csv-data-quality
+tuff pack build packs/csv-data-quality \
+  --output .work/artifacts/csv-data-quality-1.0.0.tuffpack
+tuff pack verify .work/artifacts/csv-data-quality-1.0.0.tuffpack
+tuff pack inspect .work/artifacts/csv-data-quality-1.0.0.tuffpack
+```
+
+The pack source stays in this directory. Tuff reads the declared capability members and writes one portable artifact; it does not need a helper script or a second copied pack directory.
+
+## Run it with Claude
+
+For a disposable consumer project, use the repository helper:
 
 ```sh
 ./scripts/prepare-demo.sh csv-data-quality
