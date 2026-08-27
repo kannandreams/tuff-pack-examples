@@ -139,6 +139,8 @@ tuff pack pull \
 tuff pack extract pulled.tuffpack --agent claude --output capability-runtime
 ```
 
+Use your lowercase GitHub owner in the GHCR reference. If Docker reports a missing `docker-credential-desktop` helper, see the [temporary Docker config login](docs/publishing-and-containers.md#ghcr-release) before running `tuff pack push`.
+
 Read [Publishing and container images](docs/publishing-and-containers.md) for GHCR, Amazon ECR, immutable digests, and Docker image integration.
 
 ## More reading

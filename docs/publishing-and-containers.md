@@ -22,10 +22,26 @@ agent application image
 
 ## GHCR release
 
+Replace `OWNER` with your lowercase GitHub owner. If Docker reports that `docker-credential-desktop` is missing, use a temporary Docker configuration for this login and push:
+
 ```sh
-docker login ghcr.io
+export TUFF_DOCKER_CONFIG="$(mktemp -d)"
+gh auth token | DOCKER_CONFIG="$TUFF_DOCKER_CONFIG" docker login ghcr.io \
+  -u "$(gh api user --jq .login)" \
+  --password-stdin
+```
+
+```sh
 ./scripts/build.sh .work/artifacts
-tuff pack push .work/artifacts/csv-data-quality-1.0.0.tuffpack ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --json
+DOCKER_CONFIG="$TUFF_DOCKER_CONFIG" tuff pack push \
+  .work/artifacts/csv-data-quality-1.0.0.tuffpack \
+  ghcr.io/OWNER/tuff-pack-examples:csv-data-quality-v1.0.0 --json
+```
+
+If your normal Docker credential helper works, `docker login ghcr.io` is enough and `TUFF_DOCKER_CONFIG` is not needed. Open the published package from your GitHub profile at `https://github.com/users/OWNER/packages`, then select the package name. Remove the temporary config when finished:
+
+```sh
+rm -rf "$TUFF_DOCKER_CONFIG"
 ```
 
 The response includes two digests. The artifact digest identifies the `.tuffpack` bytes. The OCI manifest digest identifies the registry envelope and is used in the returned immutable `reference`. Record both in release metadata; deploy using the digest reference.
