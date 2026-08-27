@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  TUFF_VERSION: "0.1.3"
+  TUFF_VERSION: "0.1.4"
 
 jobs:
   publish:
@@ -48,14 +48,14 @@ jobs:
           owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           echo "pack=$pack" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "artifact=dist/$pack-$version.tuffpack" >> "$GITHUB_OUTPUT"
+          echo "artifact=.work/artifacts/$pack-$version.tuffpack" >> "$GITHUB_OUTPUT"
           echo "registry_ref=ghcr.io/$owner/tuff-pack-examples:$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Build and verify
         shell: bash
         run: |
           set -euo pipefail
-          mkdir dist
+          mkdir -p .work/artifacts
           ./tuff pack check "packs/${{ steps.release.outputs.pack }}"
           ./tuff pack build "packs/${{ steps.release.outputs.pack }}" --output "${{ steps.release.outputs.artifact }}"
           ./tuff pack verify "${{ steps.release.outputs.artifact }}"
@@ -71,8 +71,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./tuff pack push "${{ steps.release.outputs.artifact }}" "${{ steps.release.outputs.registry_ref }}" --json > dist/push.json
-          immutable_ref=$(python3 -c 'import json; print(json.load(open("dist/push.json", encoding="utf-8"))["reference"])')
+          ./tuff pack push "${{ steps.release.outputs.artifact }}" "${{ steps.release.outputs.registry_ref }}" --json > .work/artifacts/push.json
+          immutable_ref=$(python3 -c 'import json; print(json.load(open(".work/artifacts/push.json", encoding="utf-8"))["reference"])')
           case "$immutable_ref" in *@sha256:*) ;; *) echo "push did not return a digest reference" >&2; exit 1 ;; esac
           echo "immutable_ref=$immutable_ref" >> "$GITHUB_OUTPUT"
 
@@ -80,10 +80,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./tuff pack pull "${{ steps.push.outputs.immutable_ref }}" --output dist/pulled.tuffpack --json > dist/pull.json
-          cmp "${{ steps.release.outputs.artifact }}" dist/pulled.tuffpack
-          ./tuff pack verify dist/pulled.tuffpack
-          ./tuff pack extract dist/pulled.tuffpack --agent claude --output dist/runtime
+          ./tuff pack pull "${{ steps.push.outputs.immutable_ref }}" --output .work/artifacts/pulled.tuffpack --json > .work/artifacts/pull.json
+          cmp "${{ steps.release.outputs.artifact }}" .work/artifacts/pulled.tuffpack
+          ./tuff pack verify .work/artifacts/pulled.tuffpack
+          ./tuff pack extract .work/artifacts/pulled.tuffpack --agent claude --output .work/artifacts/runtime
 
       - name: Upload release evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -92,6 +92,6 @@ jobs:
           if-no-files-found: error
           path: |
             ${{ steps.release.outputs.artifact }}
-            dist/push.json
-            dist/pull.json
-            dist/runtime
+            .work/artifacts/push.json
+            .work/artifacts/pull.json
+            .work/artifacts/runtime
