@@ -32,13 +32,17 @@ git clone https://github.com/kannandreams/tuff-pack-examples.git
 cd tuff-pack-examples
 ```
 
-### 3. Prepare the CSV example
+### 3. Build the CSV pack manually
 
 ```sh
-./scripts/prepare-demo.sh csv-data-quality
+tuff pack check packs/csv-data-quality
+tuff pack build packs/csv-data-quality \
+  --output .work/artifacts/csv-data-quality-1.0.0.tuffpack
+tuff pack verify .work/artifacts/csv-data-quality-1.0.0.tuffpack
+tuff pack inspect .work/artifacts/csv-data-quality-1.0.0.tuffpack
 ```
 
-The script builds the pack, keeps the artifact at `.work/artifacts/csv-data-quality-1.0.0.tuffpack`, creates a disposable agent project under `.work/csv-data-quality`, installs the pack for Claude, and checks the installed files.
+This is the complete packaging workflow: the source is `packs/csv-data-quality`, and the result is a portable `.tuffpack` artifact. The source contains a skill, tool, hook, and workflow so you can inspect each one before building.
 
 ### 4. See what was installed
 
@@ -61,9 +65,11 @@ cd ../..
 tuff pack inspect .work/artifacts/csv-data-quality-1.0.0.tuffpack
 ```
 
-### 5. Run the agent
+### 5. Run the agent (optional disposable setup)
 
 ```sh
+./scripts/prepare-demo.sh csv-data-quality
+cd .work/csv-data-quality
 claude
 ```
 
@@ -75,13 +81,17 @@ Inspect this project and complete the task in TASK.md. Do not disable the qualit
 
 The starting CSV intentionally contains problems. Claude can inspect and repair it, while the installed hook prevents the task from finishing until the deterministic check passes.
 
-To try the security example instead:
+To build the security-review pack manually instead:
 
 ```sh
-./scripts/prepare-demo.sh security-review
-cd .work/security-review
-claude
+tuff pack check packs/security-review
+tuff pack build packs/security-review \
+  --output .work/artifacts/security-review-1.0.0.tuffpack
+tuff pack verify .work/artifacts/security-review-1.0.0.tuffpack
+tuff pack inspect .work/artifacts/security-review-1.0.0.tuffpack
 ```
+
+When you want to run that pack with Claude, use `./scripts/prepare-demo.sh security-review` to create a disposable consumer project. The script is a convenience for repeatable demos; it is not required to build or verify a pack.
 
 ## Package capabilities from your own agent project
 
