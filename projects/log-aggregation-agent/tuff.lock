@@ -1,0 +1,75 @@
+# Tuff lockfile. Each entry records one capability installation target.
+version = 1
+
+[[capabilities]]
+name = "log-aggregate"
+type = "tool"
+source = "local"
+source_path = "agent-capabilities/log-aggregate"
+resolved_ref = ""
+sha256 = "699c6dd17b7c28fae485ed8b626d53da24da40d5da44431467694bca7b90b5b0"
+target = "open-agents"
+installed_path = ".agents/tools/log-aggregate"
+version = "1.0.0"
+description = "Deterministically group sanitized application logs and preserve complete source-line coverage."
+ownership = "generated"
+
+[[capabilities]]
+name = "log-aggregation-review"
+type = "workflow"
+source = "local"
+source_path = "agent-capabilities/log-aggregation-review"
+resolved_ref = ""
+sha256 = "0a6bd98190607441a754ebfbb1f6cec8893f93c37595b5ae377659bd29e5409b"
+target = "open-agents"
+installed_path = ".agents/workflows/log-aggregation-review"
+version = "1.0.0"
+description = "Require deterministic log aggregation, evidence-preserving synthesis, and a coverage finish gate."
+ownership = "generated"
+
+[[capabilities]]
+name = "log-workbench"
+type = "skill"
+source = "local"
+source_path = "agent-capabilities/log-workbench"
+resolved_ref = ""
+sha256 = "a672976c0791a08704ef28c0d18908796b80a68582ba1fb2c32249f06b0e9602"
+target = "open-agents"
+installed_path = ".agents/skills/log-workbench"
+version = "1.0.0"
+description = "Aggregate noisy application logs conservatively while preserving investigative context and evidence."
+ownership = "generated"
+
+[[capabilities]]
+name = "require-log-summary"
+type = "hook"
+source = "local"
+source_path = "agent-capabilities/require-log-summary"
+resolved_ref = ""
+sha256 = "846283182c043ff95570511de6769ea6393783c33e2c5e0a06eecc5a1962bb11"
+target = "open-agents"
+installed_path = ".agents/hooks/require-log-summary"
+version = "1.0.0"
+description = "Validate log aggregation coverage and report consistency before the agent finishes."
+ownership = "generated"
+
+[[capabilities.managed_hooks]]
+settingsPath = ".agents/hook.json"
+event = "before_finish"
+canonicalEvent = "before_finish"
+command = "sh .agents/hooks/require-log-summary/run.sh"
+baselineHash = "76b604fce71f7dc324d1ec1d8277819001a8db4b888af0f8614370492720eece"
+
+[[capabilities]]
+name = "tuff-cli-guide"
+type = "skill"
+source = "local"
+source_path = ""
+resolved_ref = ""
+sha256 = "c4c34d74b9d421f5e5ad570cb750c260808c8e6c9ef1a73da9bfe5592c4bed69"
+target = "open-agents"
+installed_path = ".agents/skills/tuff-cli-guide"
+version = "0.1.0"
+description = "Guide for using Tuff CLI commands inside this repository."
+ownership = "generated"
+

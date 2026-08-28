@@ -1,0 +1,10 @@
+id = "require-log-summary"
+version = "1.0.0"
+type = "hook"
+description = "Validate log aggregation coverage and report consistency before the agent finishes."
+files = ["run.py", "README.md"]
+
+[hook]
+event = "before_finish"
+command = "python3 .agents/hooks/require-log-summary/run.py"
+working_directory = "."

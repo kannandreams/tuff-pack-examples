@@ -1,0 +1,13 @@
+id = "log-aggregation-review"
+version = "1.0.0"
+type = "workflow"
+description = "Require deterministic log aggregation, evidence-preserving synthesis, and a coverage finish gate."
+[[workflow.requires]]
+id = "log-workbench"
+type = "skill"
+[[workflow.requires]]
+id = "log-aggregate"
+type = "tool"
+[[workflow.requires]]
+id = "require-log-summary"
+type = "hook"

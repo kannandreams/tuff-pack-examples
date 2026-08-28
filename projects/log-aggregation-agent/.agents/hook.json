@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "before_finish": [
+      {
+        "hooks": [
+          {
+            "command": "sh .agents/hooks/require-log-summary/run.sh",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

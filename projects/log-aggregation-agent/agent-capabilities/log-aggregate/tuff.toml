@@ -1,0 +1,26 @@
+id = "log-aggregate"
+version = "1.0.0"
+type = "tool"
+description = "Deterministically group sanitized application logs and preserve complete source-line coverage."
+files = ["server.py", "README.md"]
+
+[parameters]
+type = "object"
+
+[parameters.properties.input]
+type = "string"
+description = "Project-relative log input path."
+
+[parameters.properties.json_output]
+type = "string"
+description = "Project-relative JSON manifest path."
+
+[parameters.properties.markdown_output]
+type = "string"
+description = "Project-relative Markdown evidence report path."
+
+[implementation]
+language = "python3"
+entrypoint = "server.py"
+mcp = true
+runtime_deps = ["python>=3.9"]

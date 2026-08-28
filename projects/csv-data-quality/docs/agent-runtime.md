@@ -11,6 +11,12 @@ vendor's agent product. Codex, GitHub Copilot, and other supported agents can
 use the same installed `.agents/` files when they are available in the
 runtime.
 
+The agent's purpose is to act as a **Revenue Load Guardian**: protect a
+downstream revenue import by inspecting the source extract, applying only the
+authoritative corrections in `TASK.md`, and blocking completion until the
+quality policy passes. In this fixture it repairs customer ownership, a
+duplicate order ID, and two invalid amounts.
+
 ## Prerequisites
 
 - Docker
@@ -32,8 +38,10 @@ docker build -f Dockerfile.agent-runtime \
   -t csv-data-quality-agent-runtime:local .
 ```
 
-The image contains Python 3.12 and Tuff CLI 0.1.5. It does not contain host
-credentials or project files.
+The image contains Python 3.12 and builds Tuff CLI from the configured GitHub
+repository. It does not contain host credentials or project files. Set
+`--build-arg TUFF_REF=<commit-or-branch>` when building if you need to pin the
+runtime to a particular Tuff revision.
 
 ## Prepare registry credentials
 

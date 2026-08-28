@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "log-aggregate": {
+      "args": [
+        ".agents/tools/log-aggregate/server.py"
+      ],
+      "command": "python3"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+id = "log-workbench"
+version = "1.0.0"
+type = "skill"
+description = "Aggregate noisy application logs conservatively while preserving investigative context and evidence."
+files = ["SKILL.md"]

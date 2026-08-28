@@ -55,5 +55,23 @@ pack from an OCI registry, installs the `open-agents` target into a disposable
 workspace, runs the CSV repair session, and exports the repaired CSV and
 quality report without modifying the host checkout.
 
+The sample agent is a **Revenue Load Guardian**. Its job is to protect a
+downstream revenue import by applying authoritative CSV corrections and
+blocking completion while quality findings remain.
+
 See [docs/agent-runtime.md](docs/agent-runtime.md) for the local Docker
 walkthrough and GitHub-hosted runner example.
+
+For a timed, color-coded presentation of the complete local flow, run:
+
+```sh
+DEMO_STEP_DELAY=1 ./scripts/demo-agent-runtime.sh
+```
+
+The script shows the capabilities first and asks for confirmation before
+rebuilding or publishing anything. Use `--yes` or `DEMO_AUTO_APPROVE=1` for a
+non-interactive recording.
+
+The script uses your existing `gh` login to publish to GitHub Container
+Registry, then pulls the pack inside the sandboxed runtime. It writes only the
+demonstration results to `demo-output/`.
