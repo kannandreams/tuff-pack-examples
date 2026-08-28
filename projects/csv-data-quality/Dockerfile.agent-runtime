@@ -1,0 +1,8 @@
+FROM python:3.12-slim
+
+ARG TUFF_VERSION=0.1.5
+RUN python -m pip install --no-cache-dir "tuffcli==${TUFF_VERSION}"
+
+WORKDIR /runtime
+ENV PYTHONDONTWRITEBYTECODE=1
+CMD ["bash"]

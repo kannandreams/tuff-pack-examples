@@ -47,3 +47,13 @@ python3 .agents/tools/csv-quality-check/server.py check
 ```
 
 Exit status `1` is expected until `data/orders.csv` is corrected. The passing fixture is under `expected/orders.csv`.
+
+## Run an agent in a sandbox
+
+The project includes a Docker-based runtime example. It pulls the capability
+pack from an OCI registry, installs the `open-agents` target into a disposable
+workspace, runs the CSV repair session, and exports the repaired CSV and
+quality report without modifying the host checkout.
+
+See [docs/agent-runtime.md](docs/agent-runtime.md) for the local Docker
+walkthrough and GitHub-hosted runner example.
