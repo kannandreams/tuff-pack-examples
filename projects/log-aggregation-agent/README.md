@@ -66,5 +66,11 @@ To verify only the deterministic stage:
 SKIP_AGENT=1 DEMO_STEP_DELAY=2 ./scripts/demo.sh
 ```
 
+The demo offers an optional deterministic preview, then asks for confirmation
+before starting the real agent. Press Enter or type `y` to run a step, or type
+`n` to skip the preview. The agent itself invokes the same deterministic
+capability through MCP. Use `./scripts/demo.sh --yes` (or
+`DEMO_AUTO_APPROVE=1`) for an unattended run.
+
 The red `$` lines are the Tuff/runtime commands being orchestrated; their
 logic lives in Python rather than shell.

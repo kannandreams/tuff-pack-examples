@@ -51,7 +51,8 @@ secrets. Preserve the source line ranges, request IDs, trace IDs, services,
 levels, and timestamps. Clearly separate observed facts from hypotheses; do not
 claim a root cause unless the evidence proves it. Explain what the on-call
 engineer should investigate next. Return the requested structured summary and
-include the deterministic manifest counts exactly."""
+include the deterministic manifest counts exactly. If the tool call fails,
+stop and report the failure instead of producing an incident summary."""
 
 
 def write_summary(summary: IncidentSummary) -> None:

@@ -38,10 +38,11 @@ def main() -> int:
                 result = {"protocolVersion": "2025-11-25", "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": TOOL_NAME, "version": "1.0.0"}}
                 if method == "server/discover":
                     result["supportedVersions"] = ["2026-07-28"]
+                    result.update({"resultType": "complete", "ttlMs": 0, "cacheScope": "private"})
                 print(json.dumps(response(request_id, result), separators=(",", ":")), flush=True)
             elif method == "tools/list":
                 tool = {"name": TOOL_NAME, "description": "Group sanitized application log lines while preserving complete source-line coverage.", "inputSchema": {"type": "object", "properties": {"input": {"type": "string"}, "json_output": {"type": "string"}, "markdown_output": {"type": "string"}}, "required": ["input", "json_output", "markdown_output"], "additionalProperties": False}}
-                print(json.dumps(response(request_id, {"tools": [tool]}), separators=(",", ":")), flush=True)
+                print(json.dumps(response(request_id, {"tools": [tool], "resultType": "complete", "ttlMs": 0, "cacheScope": "private"}), separators=(",", ":")), flush=True)
             elif method == "tools/call":
                 arguments = params.get("arguments") or {}
                 root = Path.cwd().resolve()
@@ -51,7 +52,7 @@ def main() -> int:
                 input_path = project_path(root, input_value)
                 manifest = aggregate_log(input_path, input_label=input_value)
                 write_reports(manifest, project_path(root, json_value), project_path(root, markdown_value))
-                body = {"content": [{"type": "text", "text": json.dumps(manifest, sort_keys=True)}], "structuredContent": manifest}
+                body = {"content": [{"type": "text", "text": json.dumps(manifest, sort_keys=True)}], "structuredContent": manifest, "resultType": "complete"}
                 print(json.dumps(response(request_id, body), separators=(",", ":")), flush=True)
             elif "id" in request:
                 print(json.dumps(error(request_id, "method not found"), separators=(",", ":")), flush=True)
