@@ -10,9 +10,15 @@ from pathlib import Path
 from agents import Agent, Runner, set_default_openai_key
 from agents.mcp import MCPServerStdio, create_static_tool_filter
 from pydantic import BaseModel, Field
+from rich.console import Console
+from rich.markup import escape
+from rich.panel import Panel
+from rich.table import Table
 
 
 ROOT = Path(os.environ.get("PROJECT_ROOT", Path.cwd())).resolve()
+DEMO_MODEL = "gpt-5-mini"
+console = Console()
 
 
 class IncidentSummary(BaseModel):
@@ -73,7 +79,75 @@ def write_summary(summary: IncidentSummary) -> None:
     (reports / "agent-summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def clip(text: str, limit: int = 200) -> str:
+    return text if len(text) <= limit else f"{text[: limit - 1].rstrip()}…"
+
+
+def render_summary(path: Path) -> None:
+    """Show the incident summary at reading speed.
+
+    The full report keeps every evidence group and raw timeline line; printing
+    it verbatim buries the result under several screens of manifest text, so
+    the terminal gets the conclusions and a pointer to the file. Set
+    AGENT_SUMMARY_FULL=1 for the untouched markdown.
+    """
+    text = path.read_text(encoding="utf-8")
+    if os.environ.get("AGENT_SUMMARY_FULL") == "1":
+        print(text)
+        return
+
+    title = ""
+    lead: list[str] = []
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if line.startswith("# "):
+            title = line[2:].strip()
+        elif line.startswith("## "):
+            current = line[3:].strip()
+            sections[current] = []
+        elif not stripped:
+            continue
+        elif current is None:
+            lead.append(stripped)
+        else:
+            sections[current].append(stripped.removeprefix("- ").strip())
+
+    console.print()
+    console.print(Panel(escape(" ".join(lead)), title=f"[bold]{escape(title)}[/bold]", title_align="left", border_style="green"))
+
+    coverage = " · ".join(item.replace("**", "") for item in sections.get("Deterministic coverage", []) if ":" in item and not item.startswith("Reports"))
+    facts = Table(box=None, show_header=False, pad_edge=False)
+    facts.add_column(style="dim")
+    facts.add_column(overflow="fold")
+    facts.add_row("services", ", ".join(item.strip("`") for item in sections.get("Affected services", [])))
+    facts.add_row("timeline", f"{len(sections.get('Timeline', []))} events")
+    facts.add_row("evidence", f"{len(sections.get('Evidence groups', []))} groups")
+    facts.add_row("coverage", coverage)
+    console.print(facts)
+
+    for heading in ("Hypotheses", "Uncertainties"):
+        items = sections.get(heading, [])
+        if not items:
+            continue
+        console.print(f"\n[bold]{heading}[/bold]")
+        bullets = Table(box=None, show_header=False, pad_edge=False, padding=(0, 1))
+        bullets.add_column(style="cyan", width=1)
+        bullets.add_column(overflow="fold")
+        for item in items:
+            bullets.add_row("•", escape(clip(item)))
+        console.print(bullets)
+
+    console.print("\n[dim]Full report: reports/agent-summary.md · reports/aggregation.json · reports/aggregation.md[/dim]")
+
+
 async def run() -> None:
+    cached_summary = ROOT / "reports/agent-summary.md"
+    if cached_summary.is_file():
+        render_summary(cached_summary)
+        return
+
     set_default_openai_key(api_key())
     tool_server = MCPServerStdio(
         name="log-aggregation",
@@ -86,7 +160,7 @@ async def run() -> None:
     )
     agent = Agent(
         name="Incident Context Aggregator",
-        model=os.environ.get("OPENAI_MODEL", "gpt-5.1"),
+        model=DEMO_MODEL,
         instructions=instructions(),
         mcp_servers=[tool_server],
         output_type=IncidentSummary,
@@ -97,7 +171,7 @@ async def run() -> None:
     hook = subprocess.run([sys.executable, ".agents/hooks/require-log-summary/run.py"], cwd=ROOT, text=True)
     if hook.returncode:
         raise RuntimeError("require-log-summary hook failed")
-    print((ROOT / "reports/agent-summary.md").read_text(encoding="utf-8"))
+    render_summary(ROOT / "reports/agent-summary.md")
 
 
 def main() -> int:

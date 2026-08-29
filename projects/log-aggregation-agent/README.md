@@ -29,10 +29,15 @@ not the raw log:
 
 ```sh
 python3 -m pip install -r requirements.txt
-OPENAI_MODEL=gpt-5.6-terra \
 OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" \
 python3 -m runtime.agent
 ```
+
+The demo uses `gpt-5-mini` directly in `runtime/agent.py`; no model
+environment variable is required.
+
+If `reports/agent-summary.md` already exists, the agent prints the cached
+summary instead of making another model request.
 
 The key is read into memory and is never written to a prompt, report, image,
 or command argument. The agent receives the deterministic aggregation and
@@ -72,3 +77,45 @@ OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" \
 
 Use `./scripts/demo.sh --yes` for an unattended run. The script is only a thin
 launcher; the orchestration, prompts, and formatting live in Python.
+
+Noisy commands (`tuff add`, `tuff pack build/verify/push`, `docker build`) run
+behind a spinner and collapse to a single `✓ step (1.2s)` line; their logs are
+printed only when a command fails. Set `DEMO_VERBOSE=1` to stream everything.
+
+After the push, the demo queries the GitHub Packages API and prints the real
+package entry — visibility, version count, tag, digest, publish time, pull
+command, and page URL. `--open-package` (or `DEMO_OPEN_PACKAGE=1`) also opens
+that page in a browser.
+
+The agent prints a condensed incident summary — lead paragraph, affected
+services, coverage counts, hypotheses, and uncertainties — rather than the full
+report with every evidence group and raw timeline line. Set
+`AGENT_SUMMARY_FULL=1` to print `reports/agent-summary.md` verbatim.
+
+## Re-recording the demo video
+
+`demo.tape` drives [VHS](https://github.com/charmbracelet/vhs):
+
+```sh
+OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" vhs demo.tape
+```
+
+The tape waits for the `Demo complete` banner rather than sleeping a fixed
+number of seconds, so a real model call at the last step cannot run past the end
+of the recording. Delete `reports/agent-summary.md` first if you want the video
+to show the agent actually calling the model instead of replaying the cached
+summary.
+
+VHS drives a headless Google Chrome to render the terminal, so a blank window
+may flash on screen while `vhs` runs. It is not part of the recording.
+
+VHS records the terminal only, so the browser package page cannot appear in the
+recording directly. To show it, screenshot the GHCR package page and composite
+it as a picture-in-picture over the publish step:
+
+```sh
+scripts/overlay-package.sh ghcr-package.png 95 8
+```
+
+The arguments are the screenshot, the start second, and how long it stays on
+screen; the result is written to `demo-with-package.mp4`.
