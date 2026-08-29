@@ -1,21 +1,28 @@
 {
   "input": "data/orders.csv",
-  "non_null": [
-    "order_id",
-    "customer_id",
-    "amount",
-    "currency"
-  ],
-  "numeric": {
-    "amount": {
-      "min": 0
-    }
-  },
+  "source": "data/orders-extract.csv",
+  "quarantine": "data/quarantine.csv",
   "required_columns": [
     "order_id",
     "customer_id",
     "amount",
     "currency"
   ],
-  "unique_key": "order_id"
+  "non_null": [
+    "order_id",
+    "customer_id",
+    "amount",
+    "currency"
+  ],
+  "unique_key": "order_id",
+  "allowed_values": {
+    "currency": [
+      "GBP"
+    ]
+  },
+  "numeric": {
+    "amount": {
+      "min": 0
+    }
+  }
 }
