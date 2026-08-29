@@ -1,5 +1,0 @@
-order_id,customer_id,amount,currency
-1001,c-1,42.50,GBP
-1002,c-2,15.00,GBP
-1003,c-3,5.00,GBP
-1004,c-4,25.00,GBP

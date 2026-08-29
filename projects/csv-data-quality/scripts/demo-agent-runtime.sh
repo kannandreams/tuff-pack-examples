@@ -101,6 +101,9 @@ done
 
 gh auth status >/dev/null 2>&1 || fail "run 'gh auth login' before starting the demo"
 docker info >/dev/null 2>&1 || fail "Docker Desktop is not running"
+key_file="${OPENAI_API_KEY_FILE:-}"
+[ -n "$key_file" ] || fail "set OPENAI_API_KEY_FILE to a file holding an OpenAI key; the agent step needs it"
+[ -f "$key_file" ] || fail "OPENAI_API_KEY_FILE does not point at a file: $key_file"
 
 pack_name="csv-data-quality-capabilities"
 pack_version="${PACK_VERSION:-1.0.0}"
@@ -164,9 +167,12 @@ docker run --rm -i \
   -e CAPABILITY_REF="$oci_ref" \
   -e DEMO_STEP_DELAY="${DEMO_STEP_DELAY:-0.8}" \
   -e DOCKER_CONFIG=/root/.docker \
+  -e OPENAI_API_KEY_FILE=/run/secrets/openai_api_key \
+  -e PROJECT_ROOT=/work \
   -v "$PROJECT_DIR:/input:ro" \
   -v "$output_dir:/output" \
   -v "$runtime_docker_config:/root/.docker:ro" \
+  -v "$key_file:/run/secrets/openai_api_key:ro" \
   "$runtime_image" bash -s <<'CONTAINER_SCRIPT'
 set -euo pipefail
 
@@ -200,7 +206,9 @@ show_capabilities() {
 }
 
 mkdir -p /work
-cp -R /input/TASK.md /input/data /input/expected /input/.tuff-example /work/
+cp -R /input/TASK.md /input/data /input/.tuff-example /work/
+cp /work/data/orders-extract.csv /work/data/orders.csv
+rm -f /work/data/quarantine.csv
 cd /work
 
 step "Initialize a clean agent project"
@@ -226,28 +234,17 @@ set -e
 test "$initial_status" -eq 1
 ok "The expected initial quality findings were detected"
 
-step "Apply the task corrections in the sandbox"
-python3 - <<'PY'
-import csv
-from pathlib import Path
+step "Run the agent: decide what to release and what to quarantine"
+printf '  the model reads the extract and the checker findings, then decides each row\n'
+printf '  it is not told which rows to fix; nothing in the sandbox holds the answer\n\n'
+(cd /runtime && python -m runtime.agent)
+ok "The agent produced the governed CSV and the quarantine file"
 
-path = Path("data/orders.csv")
-rows = list(csv.DictReader(path.open(newline="", encoding="utf-8")))
-rows[1]["customer_id"] = "c-2"
-rows[2]["order_id"] = "1003"
-rows[2]["amount"] = "5.00"
-rows[3]["amount"] = "25.00"
-with path.open("w", newline="", encoding="utf-8") as handle:
-    writer = csv.DictWriter(handle, fieldnames=["order_id", "customer_id", "amount", "currency"])
-    writer.writeheader()
-    writer.writerows(rows)
-PY
-printf '%sChanges applied:%s\n' "$GREEN" "$RESET"
-printf '  - assigned order 1002 to customer c-2\n'
-printf '  - corrected the duplicate order ID to 1003\n'
-printf '  - corrected order 1003 amount to 5.00\n'
-printf '  - corrected order 1004 amount to 25.00\n'
-ok "The agent repaired the governed CSV"
+step "Show what the agent released and quarantined"
+printf '%sdata/orders.csv%s\n' "$RUST" "$RESET"
+cat data/orders.csv
+printf '\n%sdata/quarantine.csv%s\n' "$RUST" "$RESET"
+cat data/quarantine.csv
 
 step "Run the final tool check and before-finish gate"
 python3 .agents/tools/csv-quality-check/server.py check \
@@ -258,6 +255,7 @@ ok "Quality check passed and the finish gate permitted completion"
 
 mkdir -p /output
 cp data/orders.csv /output/orders.csv
+cp data/quarantine.csv /output/quarantine.csv
 cp .tuff-reports/data-quality.json /output/data-quality.json
 printf '\nFinal sandbox artifacts:\n'
 ls -lh /output

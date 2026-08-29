@@ -1,6 +1,15 @@
-# Tuff Pack examples
+# Tuff agent examples
 
-This repository contains three real agent projects whose capabilities are initialized, tracked, and ready to package with Tuff. There is no separate pack source directory and no helper script hiding the build.
+Three real agent projects, each packaging its own capabilities with Tuff.
+
+The agent is the point. Every project has a job that needs judgement — triaging
+a delivered data extract, reviewing code for security findings, summarizing an
+incident from noisy logs — and Tuff is how the skill, tool, hook, and workflow
+that agent depends on are versioned, published, and installed into a runtime
+that starts with none of them.
+
+There is no separate pack source directory and no helper script hiding the
+build.
 
 | Project | Agent layout | Capability set |
 | --- | --- | --- |

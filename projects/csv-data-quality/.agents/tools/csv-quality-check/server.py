@@ -53,6 +53,20 @@ def load_policy(root: Path, policy_name: str) -> dict[str, Any]:
             raise InputError(f"policy field '{field}' must be an array of strings")
     if "unique_key" in value and not isinstance(value["unique_key"], str):
         raise InputError("policy field 'unique_key' must be a string")
+    for field in ("source", "quarantine"):
+        if field in value and not isinstance(value[field], str):
+            raise InputError(f"policy field '{field}' must be a project-relative string")
+    allowed = value.get("allowed_values", {})
+    if not isinstance(allowed, dict) or not all(
+        isinstance(name, str)
+        and isinstance(values, list)
+        and values
+        and all(isinstance(item, str) for item in values)
+        for name, values in allowed.items()
+    ):
+        raise InputError(
+            "policy field 'allowed_values' must map column names to non-empty arrays of strings"
+        )
     numeric = value.get("numeric", {})
     if not isinstance(numeric, dict) or not all(
         isinstance(name, str) and isinstance(rule, dict)
@@ -76,6 +90,85 @@ def finding(code: str, message: str, row: int | None = None, column: str | None 
     if column is not None:
         item["column"] = column
     return item
+
+
+def read_rows(root: Path, name: str) -> tuple[list[dict[str, Any]], list[str]]:
+    path = project_path(root, name, must_exist=True)
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            columns = reader.fieldnames
+            if columns is None:
+                raise InputError(f"CSV has no header: {name}")
+            return list(reader), list(columns)
+    except (OSError, UnicodeError, csv.Error) as exc:
+        raise InputError(f"cannot read CSV {name}: {exc}") from exc
+
+
+def reconcile(root: Path, policy: dict[str, Any], governed: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Account for every source row exactly once.
+
+    Without this, quarantining is indistinguishable from deleting: an agent
+    could drop every row it could not repair and the governed file would pass
+    on its own.
+    """
+    source_name = policy["source"]
+    quarantine_name = policy["quarantine"]
+    findings: list[dict[str, Any]] = []
+    source_rows, _ = read_rows(root, source_name)
+
+    try:
+        quarantine_rows, quarantine_columns = read_rows(root, quarantine_name)
+    except InputError:
+        return [
+            finding(
+                "quarantine_missing",
+                f"every source row must be released or quarantined, but {quarantine_name} does not exist",
+            )
+        ]
+
+    for required in ("source_row", "reason"):
+        if required not in quarantine_columns:
+            findings.append(
+                finding("quarantine_schema", f"quarantine file must have a {required} column", column=required)
+            )
+    if findings:
+        return findings
+
+    seen: dict[int, int] = {}
+    for row_number, row in enumerate(quarantine_rows, start=2):
+        raw = str(row.get("source_row", "")).strip()
+        try:
+            source_row = int(raw)
+        except ValueError:
+            findings.append(finding("quarantine_source_row", f"source_row is not an integer: {raw!r}", row_number, "source_row"))
+            continue
+        if not 2 <= source_row <= len(source_rows) + 1:
+            findings.append(finding("quarantine_source_row", f"source_row {source_row} is outside {source_name}", row_number, "source_row"))
+        elif source_row in seen:
+            findings.append(finding("quarantine_duplicate", f"source_row {source_row} is already quarantined on row {seen[source_row]}", row_number, "source_row"))
+        else:
+            seen[source_row] = row_number
+        if not str(row.get("reason", "")).strip():
+            findings.append(finding("quarantine_reason", "every quarantined row needs a non-empty reason", row_number, "reason"))
+
+    released = len(governed)
+    quarantined = len(quarantine_rows)
+    if released + quarantined != len(source_rows):
+        findings.append(
+            finding(
+                "row_accounting",
+                f"{len(source_rows)} source rows must be accounted for, but {released} were released and {quarantined} quarantined",
+            )
+        )
+
+    source_keys = [str(row.get("order_id", "")).strip() for row in source_rows]
+    for row_number, row in enumerate(governed, start=2):
+        key = str(row.get("order_id", "")).strip()
+        if key and key not in source_keys:
+            findings.append(finding("invented_row", f"order_id {key} does not appear in {source_name}", row_number, "order_id"))
+
+    return findings
 
 
 def check_csv(root: Path, policy_name: str = DEFAULT_POLICY) -> dict[str, Any]:
@@ -122,6 +215,24 @@ def check_csv(root: Path, policy_name: str = DEFAULT_POLICY) -> dict[str, Any]:
             else:
                 seen[value] = row_number
 
+    for name, values in sorted(policy.get("allowed_values", {}).items()):
+        if name not in columns:
+            continue
+        permitted = set(values)
+        for row_number, row in enumerate(rows, start=2):
+            raw = row.get(name)
+            if raw is None or str(raw).strip() == "":
+                continue
+            if str(raw) not in permitted:
+                findings.append(
+                    finding(
+                        "value_not_allowed",
+                        f"value is not one of {', '.join(sorted(permitted))} in column {name}",
+                        row_number,
+                        name,
+                    )
+                )
+
     for name, rule in sorted(policy.get("numeric", {}).items()):
         if name not in columns:
             continue
@@ -140,6 +251,9 @@ def check_csv(root: Path, policy_name: str = DEFAULT_POLICY) -> dict[str, Any]:
                 findings.append(finding("below_minimum", f"value is below minimum {rule['min']} in column {name}", row_number, name))
             if "max" in rule and value > rule["max"]:
                 findings.append(finding("above_maximum", f"value is above maximum {rule['max']} in column {name}", row_number, name))
+
+    if "source" in policy and "quarantine" in policy:
+        findings.extend(reconcile(root, policy, rows))
 
     findings.sort(key=lambda item: (item.get("row", 0), item.get("column", ""), item["code"], item["message"]))
     return {

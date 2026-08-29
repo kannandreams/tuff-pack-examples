@@ -86,7 +86,9 @@ Run the following inside the container:
 ```sh
 set -euo pipefail
 mkdir -p /work
-cp -R /input/TASK.md /input/data /input/expected /input/.tuff-example /work/
+cp -R /input/TASK.md /input/data /input/.tuff-example /work/
+cp /work/data/orders-extract.csv /work/data/orders.csv
+rm -f /work/data/quarantine.csv
 cd /work
 
 tuff init
@@ -104,23 +106,10 @@ initial_status=$?
 set -e
 test "$initial_status" -eq 1
 
-# Deterministic stand-in for the agent's edit. The production agent would
-# derive the same changes from TASK.md and csv-workbench/SKILL.md.
-python3 - <<'PY'
-import csv
-from pathlib import Path
-
-path = Path("data/orders.csv")
-rows = list(csv.DictReader(path.open(newline="", encoding="utf-8")))
-rows[1]["customer_id"] = "c-2"
-rows[2]["order_id"] = "1003"
-rows[2]["amount"] = "5.00"
-rows[3]["amount"] = "25.00"
-with path.open("w", newline="", encoding="utf-8") as handle:
-    writer = csv.DictWriter(handle, fieldnames=["order_id", "customer_id", "amount", "currency"])
-    writer.writeheader()
-    writer.writerows(rows)
-PY
+# The agent decides which rows to release and which to quarantine. Nothing in
+# the sandbox tells it which rows to fix; the checker findings and the extract
+# are all it gets.
+(cd /runtime && PROJECT_ROOT=/work python -m runtime.agent)
 
 python3 .agents/tools/csv-quality-check/server.py check \
   --policy .tuff-example/data-quality-policy.json \
@@ -129,6 +118,7 @@ sh .agents/hooks/require-data-quality/run.sh
 
 mkdir -p /output
 cp data/orders.csv /output/orders.csv
+cp data/quarantine.csv /output/quarantine.csv
 cp .tuff-reports/data-quality.json /output/data-quality.json
 ```
 
@@ -172,22 +162,25 @@ not a committed workflow file:
       csv-data-quality-agent-runtime:ci \
       bash -lc 'set -euo pipefail
         mkdir -p /work
-        cp -R /input/TASK.md /input/data /input/expected /input/.tuff-example /work/
+        cp -R /input/TASK.md /input/data /input/.tuff-example /work/
+        cp /work/data/orders-extract.csv /work/data/orders.csv
         cd /work
         tuff init
         tuff pack pull "$CAPABILITY_REF" -o /tmp/capabilities.tuffpack
         tuff pack verify /tmp/capabilities.tuffpack
         tuff add pack /tmp/capabilities.tuffpack -a open-agents
         tuff check
-        python3 -c "import csv; from pathlib import Path; p=Path('data/orders.csv'); rows=list(csv.DictReader(p.open(newline='', encoding='utf-8'))); rows[1]['customer_id']='c-2'; rows[2]['order_id']='1003'; rows[2]['amount']='5.00'; rows[3]['amount']='25.00'; f=p.open('w', newline='', encoding='utf-8'); w=csv.DictWriter(f, fieldnames=['order_id','customer_id','amount','currency']); w.writeheader(); w.writerows(rows); f.close()"
+        (cd /runtime && PROJECT_ROOT=/work python -m runtime.agent)
         python3 .agents/tools/csv-quality-check/server.py check \
           --policy .tuff-example/data-quality-policy.json \
           --output .tuff-reports/data-quality.json
         sh .agents/hooks/require-data-quality/run.sh
         cp data/orders.csv /output/orders.csv
+        cp data/quarantine.csv /output/quarantine.csv
         cp .tuff-reports/data-quality.json /output/data-quality.json'
 ```
 
-In a real model-backed agent job, replace the deterministic edit/check
-sequence with the selected agent runner. The pack pull, `open-agents` target,
+The agent step needs an OpenAI key. Mount it as a file and point
+`OPENAI_API_KEY_FILE` at it; the key is read into memory and never written to a
+prompt, report, image, or command argument. The pack pull, `open-agents` target,
 project-relative paths, tool invocation, and finish hook remain the same.

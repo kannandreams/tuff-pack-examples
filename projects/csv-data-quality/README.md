@@ -38,15 +38,41 @@ tuff check
 
 The portable source stays in `agent-capabilities/`; Tuff renders the selected harness into `.agents/` and records the accepted state in `tuff.lock`. No `tuff-pack.toml` or separate pack directory is involved.
 
-## Try the deterministic checker
+## The task
 
-The starting CSV intentionally contains an empty customer, a duplicate order ID, a negative amount, and a non-numeric amount:
+`data/orders-extract.csv` is the delivered extract and is immutable evidence.
+`data/orders.csv` starts as a verbatim copy of it and is what the downstream
+revenue load reads.
+
+The extract holds three kinds of row:
+
+| Kind | Example | Correct action |
+| --- | --- | --- |
+| Clean | `1001,c-1,42.50,GBP` | release |
+| Repairable from the data itself | `gbp` for a known currency, whitespace, a row duplicating another in every field | repair and release |
+| Missing a business fact | empty customer, `not-a-number` amount, a negative amount, a currency with no rate, two rows disagreeing on one `order_id` | quarantine with a reason |
+
+There is no answer key. The agent is not told which rows to fix, and nothing in
+the project records the expected result — the checker is the oracle.
+
+## Try the deterministic checker
 
 ```sh
 python3 .agents/tools/csv-quality-check/server.py check
 ```
 
-Exit status `1` is expected until `data/orders.csv` is corrected. The passing fixture is under `expected/orders.csv`.
+Exit status `1` is expected until the extract has been triaged, because
+`data/orders.csv` still holds the raw copy.
+
+The checker does more than validate the released file. It reconciles row
+counts against the extract, so quarantining cannot quietly become deleting:
+
+| Shortcut | Finding |
+| --- | --- |
+| Drop the rows you cannot repair | `quarantine_missing` |
+| Quarantine without saying why | `quarantine_reason` |
+| Invent a row to keep the counts even | `invented_row` |
+| Quarantine one row twice to pad the count | `quarantine_duplicate` |
 
 ## Run an agent in a sandbox
 
@@ -55,9 +81,22 @@ pack from an OCI registry, installs the `open-agents` target into a disposable
 workspace, runs the CSV repair session, and exports the repaired CSV and
 quality report without modifying the host checkout.
 
-The sample agent is a **Revenue Load Guardian**. Its job is to protect a
-downstream revenue import by applying authoritative CSV corrections and
-blocking completion while quality findings remain.
+The sample agent is a **Revenue Load Guardian**. It reads the extract and the
+checker findings, then decides for each row whether the data supports a repair
+or whether the missing value is a business fact it must not invent. The
+before-finish hook blocks completion while findings remain.
+
+`runtime/agent.py` runs the model through the OpenAI Agents SDK, calling the
+packaged `csv_quality_check` tool over MCP. The model makes only the
+repair-or-quarantine judgement; the tool decides what violates the policy, and
+deterministic Python writes the files after rejecting any plan that fails to
+account for every source row.
+
+The agent step needs an OpenAI key in a file outside the project:
+
+```sh
+OPENAI_API_KEY_FILE="$HOME/.config/openai/csv-agent-key" python3 -m runtime.agent
+```
 
 See [docs/agent-runtime.md](docs/agent-runtime.md) for the local Docker
 walkthrough and GitHub-hosted runner example.
@@ -74,4 +113,5 @@ non-interactive recording.
 
 The script uses your existing `gh` login to publish to GitHub Container
 Registry, then pulls the pack inside the sandboxed runtime. It writes only the
-demonstration results to `demo-output/`.
+demonstration results to `demo-output/`, and needs `OPENAI_API_KEY_FILE` set
+for the agent step.
