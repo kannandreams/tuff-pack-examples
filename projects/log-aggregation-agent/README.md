@@ -91,31 +91,3 @@ The agent prints a condensed incident summary — lead paragraph, affected
 services, coverage counts, hypotheses, and uncertainties — rather than the full
 report with every evidence group and raw timeline line. Set
 `AGENT_SUMMARY_FULL=1` to print `reports/agent-summary.md` verbatim.
-
-## Re-recording the demo video
-
-`demo.tape` drives [VHS](https://github.com/charmbracelet/vhs):
-
-```sh
-OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" vhs demo.tape
-```
-
-The tape waits for the `Demo complete` banner rather than sleeping a fixed
-number of seconds, so a real model call at the last step cannot run past the end
-of the recording. Delete `reports/agent-summary.md` first if you want the video
-to show the agent actually calling the model instead of replaying the cached
-summary.
-
-VHS drives a headless Google Chrome to render the terminal, so a blank window
-may flash on screen while `vhs` runs. It is not part of the recording.
-
-VHS records the terminal only, so the browser package page cannot appear in the
-recording directly. To show it, screenshot the GHCR package page and composite
-it as a picture-in-picture over the publish step:
-
-```sh
-scripts/overlay-package.sh ghcr-package.png 95 8
-```
-
-The arguments are the screenshot, the start second, and how long it stays on
-screen; the result is written to `demo-with-package.mp4`.
