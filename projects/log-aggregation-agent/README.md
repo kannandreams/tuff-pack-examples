@@ -50,27 +50,25 @@ sanitized evidence only.
 The Tuff pack is intentionally independent from the `csv-data-quality`
 project.
 
-## Container demo
+## Full published-pack demo
 
-The container uses a Compose secret for the key. This keeps the key out of
-the image, environment history, prompts, and generated reports:
+The demo walks through the complete producer-to-consumer lifecycle: source
+capabilities, `tuff add`, `tuff list`, `tuff check`, pack build/verify/inspect,
+GHCR publication, image listing, and a clean container that runs
+`tuff pack pull`, `tuff add pack`, and the Python agent. It asks before every
+step; type `n` to stop or press Enter to continue:
+
+Install the Python dependencies with `uv` and ensure the Tuff CLI is version
+0.1.5 or newer with pack support:
+
+```sh
+uv sync
+```
 
 ```sh
 OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" \
   ./scripts/demo.sh
 ```
 
-To verify only the deterministic stage:
-
-```sh
-SKIP_AGENT=1 DEMO_STEP_DELAY=2 ./scripts/demo.sh
-```
-
-The demo offers an optional deterministic preview, then asks for confirmation
-before starting the real agent. Press Enter or type `y` to run a step, or type
-`n` to skip the preview. The agent itself invokes the same deterministic
-capability through MCP. Use `./scripts/demo.sh --yes` (or
-`DEMO_AUTO_APPROVE=1`) for an unattended run.
-
-The red `$` lines are the Tuff/runtime commands being orchestrated; their
-logic lives in Python rather than shell.
+Use `./scripts/demo.sh --yes` for an unattended run. The script is only a thin
+launcher; the orchestration, prompts, and formatting live in Python.

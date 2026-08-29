@@ -2,4 +2,4 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-exec python3 -m runtime.demo "$@"
+exec uv run python -m runtime.demo "$@"
