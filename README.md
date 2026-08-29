@@ -1,11 +1,12 @@
 # Tuff Pack examples
 
-This repository contains two real agent projects whose capabilities are initialized, tracked, and ready to package with Tuff. There is no separate pack source directory and no helper script hiding the build.
+This repository contains three real agent projects whose capabilities are initialized, tracked, and ready to package with Tuff. There is no separate pack source directory and no helper script hiding the build.
 
 | Project | Agent layout | Capability set |
 | --- | --- | --- |
 | [CSV data quality](projects/csv-data-quality/README.md) | Open Agents (`.agents/`) | Skill, Python/MCP checker, before-finish hook, workflow |
 | [Security review](projects/security-review/README.md) | Claude Code (`.claude/`) | Skill, Python/MCP scanner, Stop hook, workflow |
+| [Log aggregation](projects/log-aggregation-agent/README.md) | Open Agents (`.agents/`) | Skill, Python/MCP aggregator, before-finish hook, workflow |
 
 ## Install Tuff
 
