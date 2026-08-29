@@ -57,37 +57,26 @@ project.
 
 ## Full published-pack demo
 
-The demo walks through the complete producer-to-consumer lifecycle: source
-capabilities, `tuff add`, `tuff list`, `tuff check`, pack build/verify/inspect,
-GHCR publication, image listing, and a clean container that runs
-`tuff pack pull`, `tuff add pack`, and the Python agent. It asks before every
-step; type `n` to stop or press Enter to continue:
+The demo walks the complete producer-to-consumer lifecycle: source
+capabilities, `tuff add`, `tuff list`, `tuff check`, pack build, verify and
+inspect, GHCR publication, a runtime image build, then a clean container that
+runs `tuff pack pull`, `tuff add pack`, and the Python agent.
 
-Install the Python dependencies with `uv` and ensure the Tuff CLI is version
-0.1.5 or newer with pack support:
+[![Watch the walkthrough](demo-poster.png)](https://github.com/kannandreams/tuff-pack-examples/raw/main/projects/log-aggregation-agent/demo.mp4)
+
+It asks before every step; press Enter to continue or type `n` to stop.
 
 ```sh
 uv sync
+OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" ./scripts/demo.sh
 ```
 
-```sh
-OPENAI_API_KEY_FILE="$HOME/.config/openai/log-agent-key" \
-  ./scripts/demo.sh
-```
+Requires Tuff 0.1.5 or newer, Docker, and a `gh` login with permission to
+publish to GHCR.
 
-Use `./scripts/demo.sh --yes` for an unattended run. The script is only a thin
-launcher; the orchestration, prompts, and formatting live in Python.
-
-Noisy commands (`tuff add`, `tuff pack build/verify/push`, `docker build`) run
-behind a spinner and collapse to a single `✓ step (1.2s)` line; their logs are
-printed only when a command fails. Set `DEMO_VERBOSE=1` to stream everything.
-
-After the push, the demo queries the GitHub Packages API and prints the real
-package entry — visibility, version count, tag, digest, publish time, pull
-command, and page URL. `--open-package` (or `DEMO_OPEN_PACKAGE=1`) also opens
-that page in a browser.
-
-The agent prints a condensed incident summary — lead paragraph, affected
-services, coverage counts, hypotheses, and uncertainties — rather than the full
-report with every evidence group and raw timeline line. Set
-`AGENT_SUMMARY_FULL=1` to print `reports/agent-summary.md` verbatim.
+| Option | Effect |
+| --- | --- |
+| `--yes` | Approve every step; unattended run. |
+| `--open-package` | Open the published GHCR package page in a browser. |
+| `DEMO_VERBOSE=1` | Stream the full build logs instead of one line per step. |
+| `AGENT_SUMMARY_FULL=1` | Print the complete incident report rather than the condensed summary. |
