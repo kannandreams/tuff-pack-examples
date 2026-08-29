@@ -8,46 +8,6 @@
             "type": "command"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "sh .agents/hooks/require-log-summary/run.sh",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "sh .agents/hooks/require-log-summary/run.sh",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "sh .agents/hooks/require-log-summary/run.sh",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "sh .agents/hooks/require-log-summary/run.sh",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "sh .agents/hooks/require-log-summary/run.sh",
-            "type": "command"
-          }
-        ]
       }
     ]
   }
