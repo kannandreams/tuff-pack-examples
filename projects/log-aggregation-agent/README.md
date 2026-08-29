@@ -62,7 +62,7 @@ capabilities, `tuff add`, `tuff list`, `tuff check`, pack build, verify and
 inspect, GHCR publication, a runtime image build, then a clean container that
 runs `tuff pack pull`, `tuff add pack`, and the Python agent.
 
-[![Watch the walkthrough](demo-poster.png)](https://github.com/kannandreams/tuff-pack-examples/raw/main/projects/log-aggregation-agent/demo.mp4)
+https://github.com/user-attachments/assets/84afad2c-2951-4ddd-a490-baf0b4f51720
 
 It asks before every step; press Enter to continue or type `n` to stop.
 
