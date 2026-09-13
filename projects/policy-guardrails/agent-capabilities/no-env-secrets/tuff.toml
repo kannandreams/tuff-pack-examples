@@ -1,0 +1,9 @@
+id = "no-env-secrets"
+type = "policy"
+version = "1.0.0"
+description = "Agents must never read .env files."
+
+[[policy.rules]]
+effect = "deny"
+read = [".env"]
+reason = "Secrets stay out of agent context."

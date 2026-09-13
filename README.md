@@ -1,6 +1,6 @@
 # Tuff agent examples
 
-Three real agent projects, each packaging its own capabilities with Tuff.
+Four real agent projects, each using Tuff to manage the capabilities it depends on.
 
 The agent is the point. Every project has a job that needs judgement — triaging
 a delivered data extract, reviewing code for security findings, summarizing an
@@ -16,6 +16,7 @@ build.
 | [CSV data quality](projects/csv-data-quality/README.md) | Open Agents (`.agents/`) | Skill, Python/MCP checker, before-finish hook, workflow |
 | [Security review](projects/security-review/README.md) | Claude Code (`.claude/`) | Skill, Python/MCP scanner, Stop hook, workflow |
 | [Log aggregation](projects/log-aggregation-agent/README.md) | Open Agents (`.agents/`) | Skill, Python/MCP aggregator, before-finish hook, workflow |
+| [Policy guardrails](projects/policy-guardrails/README.md) | Claude Code (`.claude/`) | Policy that denies reading `.env` |
 
 ## Install Tuff
 
@@ -110,6 +111,17 @@ The API key is only needed for the last step, and is read into memory rather
 than written to a prompt, report, image, or command argument. The recorded
 walkthrough is embedded on
 [Capability Packs](https://tuffcli.dev/concepts/packs/).
+
+## Example 4: stop Claude Code from reading secrets with a policy
+
+This example needs Tuff 0.10.0 or newer and Claude Code, signed in.
+
+```sh
+cd ../policy-guardrails
+./scripts/demo.sh
+```
+
+Claude Code is asked for a value in `.env` twice. The first time, it reads the file and answers. Then `tuff add` installs the `no-env-secrets` policy, which Tuff compiles into a `permissions.deny` rule in `.claude/settings.json`, and the same question is denied. The demo runs in a temporary copy and the secret is fake. See the [project README](projects/policy-guardrails/README.md) for what the rule does and does not cover.
 
 ## What is happening
 
